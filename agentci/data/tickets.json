@@ -1,0 +1,242 @@
+[
+  {
+    "id": "t00",
+    "question": "I signed up for the monthly plan 5 days ago and it's not working for my use case. Can I get a refund?",
+    "gold_resolution": "Yes, you are eligible for a full refund. According to our Refund Policy, customers on a monthly billing plan may request a full refund within 14 calendar days of their most recent charge. Since you signed up 5 days ago, you are within the 14-day window. Please submit your refund request through the billing portal or contact support. Once approved, the refund will be processed and appear on your original payment method within 5 business days.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t01",
+    "question": "When will my account be charged each month? I signed up on the 15th.",
+    "gold_resolution": "According to our Billing Cycle policy, monthly plans are billed on the same calendar date each month, beginning on the date of initial subscription activation. Since you signed up on the 15th, your account will be charged on the 15th of each month. You can confirm your next billing date in the Billing section of your account dashboard.",
+    "policy_id": "billing-cycle"
+  },
+  {
+    "id": "t02",
+    "question": "I want to move from the Starter plan to the Pro plan. Will I be charged right away?",
+    "gold_resolution": "Yes, upgrading takes effect immediately. According to our Plan Upgrades policy, for monthly plans the billing difference is prorated based on the number of days remaining in your current billing cycle and charged immediately upon confirmation. Your Pro plan features, including additional seats and higher usage limits, will be available instantly after the upgrade is confirmed.",
+    "policy_id": "plan-upgrades"
+  },
+  {
+    "id": "t03",
+    "question": "I'd like to move from Pro to Starter. When will the lower price take effect?",
+    "gold_resolution": "Per our Plan Downgrades policy, downgrades take effect at the start of the next billing cycle—they are never applied mid-cycle. No credit or refund is issued for the difference in price for the current billing period. Please make sure your current usage (e.g., number of active seats) is within the Starter plan limits before the downgrade is confirmed. You can submit the request on the Plan Settings page.",
+    "policy_id": "plan-downgrades"
+  },
+  {
+    "id": "t04",
+    "question": "My payment failed this morning. What happens now? Will my account be shut down immediately?",
+    "gold_resolution": "Your account will not be shut down immediately. According to our Failed Payments policy, the system automatically retries the charge after 3 days, then again after 5 days—a total of 3 attempts over 8 days. You will receive an email notification after each failed attempt with instructions to update your payment method. If all three attempts fail, your account will be suspended. To avoid interruption, please update your payment method in the billing portal as soon as possible.",
+    "policy_id": "failed-payments"
+  },
+  {
+    "id": "t05",
+    "question": "If I cancel today, when does my subscription actually end?",
+    "gold_resolution": "According to our Cancellation policy, cancellation takes effect at the end of the current billing period—not immediately. You will retain access to all paid features until your period end date, and no further charges will be made after that. Your data will be retained for 90 days after cancellation before being permanently deleted, unless you reactivate or export it beforehand.",
+    "policy_id": "cancellation"
+  },
+  {
+    "id": "t06",
+    "question": "I'm on an annual plan and want a refund. Am I eligible?",
+    "gold_resolution": "Annual plan subscribers are not eligible for full refunds under our Refund Policy. Instead, you are eligible to receive a prorated credit for the unused portion of your current billing cycle. If you would like to proceed, please contact support or submit a request through the billing portal. Note that the 14-day full-refund window applies only to monthly billing plans.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t07",
+    "question": "Where can I download my invoices?",
+    "gold_resolution": "According to our Invoices and Receipts policy, invoices are automatically generated for every successful payment and are available for download in the Billing > Invoices section of your account dashboard. Each invoice includes the billing period, itemized charges, applicable taxes, and the payment method used.",
+    "policy_id": "invoices"
+  },
+  {
+    "id": "t08",
+    "question": "How do I add more users to my team?",
+    "gold_resolution": "According to our Seat Management policy, each plan tier includes a fixed number of user seats. You can add seats beyond your plan limit by upgrading to a higher tier or purchasing seat add-ons. Seat add-ons are billed monthly at a per-seat rate and are prorated when added mid-cycle. Account admins can manage seats in the Team Settings section of the dashboard.",
+    "policy_id": "seat-management"
+  },
+  {
+    "id": "t09",
+    "question": "Do you charge VAT? I'm based in Germany.",
+    "gold_resolution": "Yes, according to our Tax and VAT policy, sales tax and VAT are calculated based on the billing address on file and applicable local tax regulations at the time of charge. As a customer in Germany, VAT will be applied to your invoices. If you have a valid VAT registration number, you can enter it in your Billing Profile to have VAT removed from future invoices. This cannot be applied retroactively to previously issued invoices.",
+    "policy_id": "tax-vat"
+  },
+  {
+    "id": "t10",
+    "question": "I just started a free trial. Do I need to enter a credit card?",
+    "gold_resolution": "No credit card is required to start the free trial. According to our Free Trial policy, new customers are eligible for a 14-day free trial on any monthly plan with no credit card required. At the end of the 14-day period, your account will automatically convert to the selected paid plan and the first charge will be made the day after the trial ends—unless you cancel before the trial ends.",
+    "policy_id": "free-trial"
+  },
+  {
+    "id": "t11",
+    "question": "I was charged 3 weeks ago and want a refund. Am I still within the refund window?",
+    "gold_resolution": "Unfortunately, you are outside the refund window. Our Refund Policy allows full refunds only within 14 calendar days of the most recent charge. Since your charge was 3 weeks (approximately 21 days) ago, this exceeds the 14-day limit and you are no longer eligible for a full refund. Please contact support if you have extenuating circumstances to discuss.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t12",
+    "question": "I'm on the annual plan. Can I upgrade to a higher tier mid-year?",
+    "gold_resolution": "Yes, you can upgrade at any time. According to our Plan Upgrades policy, upgrades take effect immediately upon confirmation. For annual plans, the prorated difference for the remaining months is charged at the time of upgrade. Your upgraded features, including additional seats and higher usage limits, will be available instantly.",
+    "policy_id": "plan-upgrades"
+  },
+  {
+    "id": "t13",
+    "question": "My billing date is the 31st. What happens in February or other short months?",
+    "gold_resolution": "According to our Billing Cycle policy, if your billing date falls on a day that does not exist in a given month—such as the 31st in February—the charge will occur on the last day of that month instead. So in February you would be charged on the 28th (or 29th in a leap year).",
+    "policy_id": "billing-cycle"
+  },
+  {
+    "id": "t14",
+    "question": "After I cancel, how long do you keep my data?",
+    "gold_resolution": "According to our Cancellation policy, your data is retained for 90 days after the cancellation end date. After 90 days, it is permanently deleted unless you reactivate your subscription or export your data beforehand. You will continue to have access to paid features until the end of the current billing period.",
+    "policy_id": "cancellation"
+  },
+  {
+    "id": "t15",
+    "question": "My card was declined and I got an email. How many more times will you try to charge me?",
+    "gold_resolution": "According to our Failed Payments policy, after the first failed attempt, the system will retry twice more—once after 3 days and again after 5 days—for a total of 3 attempts over 8 days. You will receive an email notification after each failed attempt. If all three attempts fail, your account will be suspended. We recommend updating your payment method in the billing portal to avoid account suspension.",
+    "policy_id": "failed-payments"
+  },
+  {
+    "id": "t16",
+    "question": "I need to add a VAT number to my invoices. Can you update past invoices?",
+    "gold_resolution": "According to our Tax and VAT policy, you can add your VAT registration number in your Billing Profile, which will remove VAT from future invoices. However, VAT changes cannot be applied retroactively to previously issued invoices. Please update your Billing Profile before your next invoice is generated to ensure the VAT number appears going forward.",
+    "policy_id": "tax-vat"
+  },
+  {
+    "id": "t17",
+    "question": "I want to downgrade but I currently have more seats active than the lower plan allows. What do I need to do?",
+    "gold_resolution": "According to our Plan Downgrades policy, if your current usage—such as the number of active seats—exceeds the limits of the new plan, you must reduce your usage before the downgrade can be confirmed. You can manage and remove seats in the Team Settings section of your dashboard. Once your seat count is within the lower plan's limit, you can confirm the downgrade on the Plan Settings page.",
+    "policy_id": "plan-downgrades"
+  },
+  {
+    "id": "t18",
+    "question": "Can I get a refund on a monthly plan if I've only used 2 days of the billing period?",
+    "gold_resolution": "Yes. Our Refund Policy provides that customers on a monthly billing plan can request a full refund within 14 calendar days of their most recent charge. Having only used 2 days of the billing period means you are well within the 14-day window. Submit your refund request through the billing portal or contact support, and once approved, the refund will appear on your original payment method within 5 business days.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t19",
+    "question": "I accidentally created a second account to get another free trial. Is that allowed?",
+    "gold_resolution": "No, this is not allowed. According to our Free Trial policy, each email address is eligible for only one free trial. Creating multiple accounts to extend trial access is explicitly a violation of our Terms of Service. Please use your original account; if you have questions about your options, contact support.",
+    "policy_id": "free-trial"
+  },
+  {
+    "id": "t20",
+    "question": "How can I forward invoices to my accountant's email address?",
+    "gold_resolution": "According to our Invoices and Receipts policy, you can have invoices forwarded to an alternative email address by adding a billing contact in your account settings. Your accountant's email can be added there to ensure they receive copies of all future invoices automatically.",
+    "policy_id": "invoices"
+  },
+  {
+    "id": "t21",
+    "question": "What happens to my account if I remove some seats? Does the charge change immediately?",
+    "gold_resolution": "According to our Seat Management policy, removing seats takes effect at the start of the next billing cycle—not immediately. The billing amount is adjusted accordingly starting from the next cycle. You can manage seat removal in the Team Settings section of your account dashboard.",
+    "policy_id": "seat-management"
+  },
+  {
+    "id": "t22",
+    "question": "I'm on an annual plan. When will I be charged next year?",
+    "gold_resolution": "According to our Billing Cycle policy, annual plans are billed once per year on the anniversary of your subscription start date. So you will be charged on the same calendar date next year as when you first subscribed. You can confirm the exact date in the Billing section of your account dashboard.",
+    "policy_id": "billing-cycle"
+  },
+  {
+    "id": "t23",
+    "question": "I want to cancel. Can I still resubscribe later if I change my mind?",
+    "gold_resolution": "Yes, according to our Cancellation policy, customers may re-subscribe at any time after cancellation. Keep in mind that your data is retained for 90 days after the cancellation period ends; if you resubscribe within that window, your data will still be available. After 90 days, data is permanently deleted.",
+    "policy_id": "cancellation"
+  },
+  {
+    "id": "t24",
+    "question": "How long does a refund take to appear on my credit card statement?",
+    "gold_resolution": "According to our Refund Policy, once a refund is approved, it is processed within 5 business days and will appear on your original payment method. Note that eligibility requires being on a monthly billing plan and requesting the refund within 14 calendar days of the most recent charge.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t25",
+    "question": "My account was suspended due to a failed payment. How do I reactivate it?",
+    "gold_resolution": "According to our Failed Payments policy, to reactivate a suspended account you must update your payment method and pay the overdue balance in the billing portal. Once the outstanding amount is settled, your account and access to paid features will be restored.",
+    "policy_id": "failed-payments"
+  },
+  {
+    "id": "t26",
+    "question": "Do prices on your website include tax?",
+    "gold_resolution": "According to our Tax and VAT policy, all displayed prices are exclusive of tax unless otherwise stated. The final tax amount—based on your billing address and applicable local tax regulations—is shown at checkout and on each invoice.",
+    "policy_id": "tax-vat"
+  },
+  {
+    "id": "t27",
+    "question": "If my free trial ends, will I be charged automatically?",
+    "gold_resolution": "Yes. According to our Free Trial policy, at the end of the 14-day trial period, your account automatically converts to the selected paid plan and the first charge is made on the day after the trial ends. If you do not want to be charged, you must cancel before the trial ends.",
+    "policy_id": "free-trial"
+  },
+  {
+    "id": "t28",
+    "question": "Can I change the company name that appears on my invoices?",
+    "gold_resolution": "Yes, you can update invoice details such as company name in your billing profile. However, according to our Invoices and Receipts policy, invoices cannot be retroactively modified—only future invoices will reflect the updated billing profile information. Update your billing profile before your next invoice is generated.",
+    "policy_id": "invoices"
+  },
+  {
+    "id": "t29",
+    "question": "I upgraded from Starter to Pro mid-cycle. Why was I charged an amount less than the full Pro price?",
+    "gold_resolution": "This is expected behavior. According to our Plan Upgrades policy, for monthly plans the billing difference when upgrading is prorated based on the number of days remaining in your current billing cycle. You were only charged for the Pro plan for the remaining days in your current cycle, not the full monthly amount. Your next billing cycle will be charged the full Pro plan price.",
+    "policy_id": "plan-upgrades"
+  },
+  {
+    "id": "t30",
+    "question": "Can I add seat add-ons without upgrading my plan tier?",
+    "gold_resolution": "Yes. According to our Seat Management policy, you can purchase seat add-ons beyond your plan's included seat count without upgrading to a higher tier. Seat add-ons are billed monthly at a per-seat rate and are prorated when added mid-cycle. You can manage seat add-ons in the Team Settings section of your dashboard.",
+    "policy_id": "seat-management"
+  },
+  {
+    "id": "t31",
+    "question": "I requested a refund 3 days ago and haven't seen it yet. When should I expect it?",
+    "gold_resolution": "According to our Refund Policy, once a refund is approved it is processed within 5 business days and will appear on your original payment method. If your request was approved 3 days ago, please allow up to 2 more business days for the refund to appear. If it has been more than 5 business days since approval, please contact support.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t32",
+    "question": "I want to downgrade but keep my current billing period. Will I lose access to Pro features today?",
+    "gold_resolution": "No, you will not lose access immediately. According to our Plan Downgrades policy, downgrades take effect at the start of the next billing cycle. You will retain access to your current plan's features until then. No credit or refund is issued for the price difference in the current billing period.",
+    "policy_id": "plan-downgrades"
+  },
+  {
+    "id": "t33",
+    "question": "Is there a free trial available for annual plans?",
+    "gold_resolution": "According to our Free Trial policy, the 14-day free trial is available on any monthly plan. The policy does not extend a free trial to annual plans. If you would like to try the product before committing to an annual subscription, you can start with the free trial on a monthly plan and then switch to annual billing afterward.",
+    "policy_id": "free-trial"
+  },
+  {
+    "id": "t34",
+    "question": "I'm in the US. Will I be charged sales tax?",
+    "gold_resolution": "Possibly. According to our Tax and VAT policy, U.S. customers may be subject to state-level sales tax depending on their state of residence. The applicable tax is calculated based on the billing address on file at the time of charge. The exact tax amount will be shown at checkout and on each invoice.",
+    "policy_id": "tax-vat"
+  },
+  {
+    "id": "t35",
+    "question": "My annual plan is up for renewal. Can I get a partial refund if I decide to cancel right after the renewal charge?",
+    "gold_resolution": "Annual plan subscribers are not eligible for full refunds under our Refund Policy. Instead, you would receive a prorated credit for the unused portion of the current billing cycle. The 14-day full refund window applies exclusively to monthly billing plans. If you wish to cancel, you can do so through the Plan Settings page and your subscription will end at the close of the current billing period.",
+    "policy_id": "refund-policy"
+  },
+  {
+    "id": "t36",
+    "question": "I cancelled my subscription. Can I still log in and see my data?",
+    "gold_resolution": "Yes, according to our Cancellation policy, you retain access to all paid features until the end of the current billing period, even after cancelling. After the billing period ends, your data is retained for 90 days before being permanently deleted. We recommend exporting any important data during that 90-day window if you do not plan to reactivate.",
+    "policy_id": "cancellation"
+  },
+  {
+    "id": "t37",
+    "question": "What information is included on each invoice?",
+    "gold_resolution": "According to our Invoices and Receipts policy, each invoice includes the billing period, itemized charges, applicable taxes, and the payment method used. Invoices are automatically generated for every successful payment and are available for download in the Billing > Invoices section of your account dashboard.",
+    "policy_id": "invoices"
+  },
+  {
+    "id": "t38",
+    "question": "I added seats mid-cycle. Will I be charged the full monthly rate for them?",
+    "gold_resolution": "No, you will not be charged the full monthly rate for mid-cycle additions. According to our Seat Management policy, seat add-ons are prorated when added mid-cycle—you are billed only for the portion of the month remaining at the time you add the seats. From the next billing cycle onward, you will be charged the full monthly per-seat rate.",
+    "policy_id": "seat-management"
+  },
+  {
+    "id": "t39",
+    "question": "I've been on a monthly plan for 6 months. Can I still get a refund for this month's charge?",
+    "gold_resolution": "Yes, you may still be eligible. Our Refund Policy applies to the most recent charge, not to the total duration of your subscription. As long as you are on a monthly billing plan and submit your refund request within 14 calendar days of this month's charge, you qualify for a full refund. Once approved, the refund will be processed and appear on your original payment method within 5 business days.",
+    "policy_id": "refund-policy"
+  }
+]
