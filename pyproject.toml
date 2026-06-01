@@ -14,6 +14,7 @@ dependencies = [
     "click>=8.1.0",
     "fastapi>=0.110.0",
     "uvicorn>=0.29.0",
+    "mcp>=1.27.2",
 ]
 
 [project.optional-dependencies]
