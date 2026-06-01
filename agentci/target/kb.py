@@ -20,11 +20,24 @@ _FALLBACK_KB = [
 
 _KB_PATH = Path(__file__).resolve().parent.parent / "data" / "kb.json"
 
+# Common words carry no retrieval signal and (as bare substrings like "to"/"the")
+# would spuriously match every KB section, so they are excluded from matching.
+_STOP_WORDS = frozenset({
+    "how", "to", "the", "a", "an", "of", "on", "in", "is", "it", "do", "does", "did",
+    "for", "and", "or", "with", "my", "i", "can", "could", "would", "should",
+    "what", "when", "where", "why", "who", "which", "are", "be", "this", "that",
+})
+
 
 def _load_kb() -> list[dict]:
     if _KB_PATH.exists():
         return json.loads(_KB_PATH.read_text(encoding="utf-8"))
     return _FALLBACK_KB
+
+
+def _content_words(query: str) -> list[str]:
+    """Lowercased query tokens with stop-words and very short tokens removed."""
+    return [w for w in query.lower().split() if w not in _STOP_WORDS and len(w) > 2]
 
 
 def lookup_kb(query: str) -> dict:
@@ -36,9 +49,9 @@ def lookup_kb(query: str) -> dict:
     Returns:
         dict: {"status": "success", "sections": [{"id","title","body"}, ...]}.
     """
-    q = query.lower()
+    words = _content_words(query)
     sections = [
         s for s in _load_kb()
-        if any(word in (s["title"] + " " + s["body"]).lower() for word in q.split())
+        if any(word in (s["title"] + " " + s["body"]).lower() for word in words)
     ]
     return {"status": "success", "sections": sections}
