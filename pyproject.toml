@@ -1,0 +1,31 @@
+[project]
+name = "agentci"
+version = "0.1.0"
+description = "Regression CI for AI agents"
+requires-python = ">=3.13"
+dependencies = [
+    "google-adk>=1.0.0",
+    "google-genai>=1.0.0",
+    "arize-phoenix-otel>=0.6.0",
+    "arize-phoenix-client>=1.0.0",
+    "openinference-instrumentation-google-adk>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "pandas>=2.2.0",
+    "click>=8.1.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0"]
+
+[project.scripts]
+agentci = "agentci.cli:cli"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
