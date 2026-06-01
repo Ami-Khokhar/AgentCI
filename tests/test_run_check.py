@@ -1,7 +1,9 @@
 from agentci import engineer
 
 def _rows(split, ids, passed):
-    return [{"id": i, "split": split, "passed": passed,
+    # 'answer' is part of the Plan 02 per-case row contract; include it so run_check's
+    # answer fallback isn't triggered.
+    return [{"id": i, "split": split, "passed": passed, "answer": f"answer-{i}",
              "scores": {"correctness": 0.9 if passed else 0.2, "groundedness": 0.9,
                         "completeness": 0.9, "policy_reference": 0.9}} for i in ids]
 

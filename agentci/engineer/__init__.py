@@ -7,6 +7,7 @@ from agentci.engineer.mint import build_minted_case, persist_minted_case
 from agentci.engineer.lift import evaluate_promotion
 from agentci.engineer.report import assemble_report
 from agentci.evals.experiment import run_candidate
+from agentci.target.run import answer_ticket
 from agentci.data.dataset import load_tickets
 
 _MCP_CALLS = {"n": 0}
@@ -30,9 +31,23 @@ def _gold_for(cluster) -> tuple[str, str]:
 
 
 def run_check(candidate_prompt: str, label: str) -> dict:
-    """Run one AgentCI check: detect -> (cluster -> fix -> held-out lift -> mint) -> report."""
-    baseline = fetch_baseline_via_mcp("baseline-tune") + fetch_baseline_via_mcp("baseline-heldout")
-    _MCP_CALLS["n"] = _mcp_call_count() or 0
+    """Run one AgentCI check: detect -> (cluster -> fix -> held-out lift -> mint) -> report.
+
+    Precondition: the baseline experiments ``baseline-tune`` and ``baseline-heldout`` must
+    already exist in Phoenix. They are produced by running ``BASELINE_SUPPORT_PROMPT`` over
+    each split (Plan 02's live step records ``baseline-tune``; Plan 03's live step records
+    ``baseline-heldout``) and are read back at runtime THROUGH Phoenix MCP (GAP-4) — the
+    Engineer never holds a local copy. Each per-split experiment contains only its own
+    split's rows, so concatenating the two fetches and re-splitting is well defined.
+    """
+    # Count MCP-mediated baseline reads so the report can evidence load-bearing MCP (GAP-4).
+    # Each fetch is one MCP read operation (a real agent+MCP round-trip when recording, the
+    # recorded result of that read when replaying). Per-tool-call spans live in Phoenix traces.
+    _MCP_CALLS["n"] = 0
+    baseline = fetch_baseline_via_mcp("baseline-tune")
+    _MCP_CALLS["n"] += 1
+    baseline += fetch_baseline_via_mcp("baseline-heldout")
+    _MCP_CALLS["n"] += 1
 
     cand_tune = run_candidate(candidate_prompt, config.DATASET_NAME, "tune", f"cand-{label}-tune")
     flips = compute_flips(_split(baseline, "tune"), cand_tune)
@@ -40,15 +55,23 @@ def run_check(candidate_prompt: str, label: str) -> dict:
     if not is_regression(_split(baseline, "tune"), cand_tune):
         return assemble_report(label, False, flips, None, None, None, _mcp_call_count())
 
-    failing = [{"id": cid} for cid in flips["pass_to_fail"]]
     by_id = {t["id"]: t for t in load_tickets()}
     cand_by_id = {r["id"]: r for r in cand_tune}
-    cases = [{
-        "id": cid,
-        "question": by_id.get(cid, {}).get("question", ""),
-        "gold": by_id.get(cid, {}).get("gold_resolution", ""),
-        "answer": cand_by_id.get(cid, {}).get("answer", ""),  # present per Plan 02 row contract
-    } for cid in flips["pass_to_fail"]]
+    cases = []
+    for cid in flips["pass_to_fail"]:
+        t = by_id.get(cid, {})
+        question = t.get("question", "")
+        answer = cand_by_id.get(cid, {}).get("answer", "")  # present per Plan 02 row contract
+        if not answer:
+            # Recover the candidate's actual output deterministically (cached) so clustering
+            # has real text to reason about, rather than silently clustering on an empty answer.
+            answer = answer_ticket(candidate_prompt, question).get("answer", "")
+        cases.append({
+            "id": cid,
+            "question": question,
+            "gold": t.get("gold_resolution", ""),
+            "answer": answer,
+        })
     cluster = cluster_failures(cases)
 
     fix = draft_fix(candidate_prompt, cluster)
