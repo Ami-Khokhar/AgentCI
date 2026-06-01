@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentCI · Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF6;
+    --ink:#16140F;
+    --ink-soft:#5C574C;
+    --muted:#9A9286;
+    --hair:rgba(22,20,15,.16);
+    --hair-soft:rgba(22,20,15,.08);
+    --ember:#C2410C;
+    --ember-soft:rgba(194,65,12,.10);
+    --card:rgba(255,255,255,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased}
+  body{
+    font-family:"JetBrains Mono",monospace;
+    background-color:var(--paper);
+    background-image:radial-gradient(rgba(22,20,15,.05) 1px,transparent 1px);
+    background-size:24px 24px;
+    color:var(--ink);
+    line-height:1.5;
+    padding:64px 40px 96px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{margin-bottom:64px;position:relative}
+  .kicker{
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--muted);display:flex;gap:12px;align-items:center;margin-bottom:18px;
+  }
+  .kicker::before{content:"";width:28px;height:1px;background:var(--ember)}
+  h1{
+    font-family:"Instrument Serif",serif;font-weight:400;
+    font-size:clamp(48px,8vw,88px);line-height:.94;letter-spacing:-.01em;
+  }
+  h1 em{font-style:italic;color:var(--ember)}
+  .lede{
+    margin-top:22px;max-width:560px;font-size:13.5px;color:var(--ink-soft);font-weight:300;
+  }
+  .decisions{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+  .chip{
+    font-size:10.5px;letter-spacing:.04em;color:var(--ink-soft);
+    border:1px solid var(--hair);padding:5px 11px;border-radius:2px;background:var(--card);
+  }
+  .chip b{color:var(--ember);font-weight:600}
+
+  /* ---------- lanes ---------- */
+  .lane{
+    border:1px solid var(--hair);background:rgba(255,255,255,.34);
+    border-radius:3px;padding:30px 30px 34px;margin-bottom:18px;position:relative;
+    backdrop-filter:blur(.5px);
+  }
+  .lane-head{display:flex;align-items:baseline;gap:14px;margin-bottom:30px;flex-wrap:wrap}
+  .lane-no{
+    font-family:"Instrument Serif",serif;font-size:30px;line-height:1;color:var(--ember);
+  }
+  .lane-title{font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+  .lane-sub{font-size:11px;color:var(--muted);margin-left:auto;letter-spacing:.04em}
+
+  .flow{display:flex;align-items:stretch;flex-wrap:wrap;gap:0}
+
+  .node{
+    flex:1 1 0;min-width:138px;
+    border:1px solid var(--hair);background:var(--card);border-radius:3px;
+    padding:15px 15px 16px;display:flex;flex-direction:column;gap:5px;
+    transition:transform .25s cubic-bezier(.2,.7,.2,1),border-color .25s,box-shadow .25s;
+  }
+  .node:hover{transform:translateY(-3px);border-color:var(--ink);box-shadow:6px 8px 0 -2px var(--hair-soft)}
+  .node .tag{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .node h3{font-size:13px;font-weight:600;letter-spacing:-.01em}
+  .node p{font-size:10.5px;color:var(--ink-soft);font-weight:300;line-height:1.45}
+  .node--in{background:transparent;border-style:dashed}
+  .node--out{border-color:var(--ember);background:var(--ember-soft)}
+  .node--out h3{color:var(--ember)}
+
+  /* arrows */
+  .arrow{flex:0 0 46px;align-self:center;height:1px;background:var(--hair);position:relative;margin:0 2px}
+  .arrow::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);
+    border-left:6px solid var(--ink-soft);border-top:4px solid transparent;border-bottom:4px solid transparent}
+  .arrow--em{background:var(--ember)}
+  .arrow--em::after{border-left-color:var(--ember)}
+
+  /* tool sub-branch */
+  .subflow{display:flex;align-items:center;gap:0;margin:14px 0 0 32px;padding-top:14px;
+    border-top:1px dashed var(--hair-soft);}
+  .subflow .branch-label{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-right:18px;white-space:nowrap}
+  .mini{
+    border:1px solid var(--hair);border-radius:3px;padding:9px 13px;background:var(--card);
+    font-size:11px;font-weight:500;transition:border-color .25s,transform .25s;
+  }
+  .mini:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .mini span{display:block;font-size:9px;color:var(--muted);letter-spacing:.04em;font-weight:300;margin-top:1px}
+
+  /* crosscut band */
+  .crosscut{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .cc{
+    flex:1 1 220px;font-size:10.5px;color:var(--ink-soft);font-weight:300;
+    border-left:2px solid var(--ember);padding:7px 0 7px 12px;background:linear-gradient(90deg,var(--ember-soft),transparent 60%);
+  }
+  .cc b{font-weight:600;color:var(--ink);letter-spacing:.02em}
+
+  /* link between lanes */
+  .interlink{display:flex;align-items:center;gap:14px;margin:6px 0 6px 30px;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .interlink .v{width:1px;height:26px;background:var(--hair);position:relative}
+  .interlink .v::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+    border-top:6px solid var(--ink-soft);border-left:4px solid transparent;border-right:4px solid transparent}
+
+  /* judges grid */
+  .judges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1 1 280px}
+  .judge{border:1px solid var(--hair);border-radius:3px;padding:10px 11px;background:var(--card);
+    transition:border-color .25s,transform .25s}
+  .judge:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .judge .d{font-size:11px;font-weight:600}
+  .judge .s{font-size:9px;color:var(--muted);letter-spacing:.06em;margin-top:3px}
+
+  /* ---------- status footer ---------- */
+  .status{margin-top:54px;border-top:1px solid var(--hair);padding-top:30px}
+  .status h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:26px;margin-bottom:22px}
+  .roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stage{border:1px solid var(--hair);border-radius:3px;padding:16px 16px 18px;background:var(--card);position:relative}
+  .stage--todo{border-style:dashed;background:transparent;opacity:.62}
+  .stage .pn{font-family:"Instrument Serif",serif;font-size:22px;color:var(--ember);line-height:1}
+  .stage--todo .pn{color:var(--muted)}
+  .stage .nm{font-size:11.5px;font-weight:600;margin-top:8px;letter-spacing:-.01em}
+  .stage .ds{font-size:10px;color:var(--ink-soft);font-weight:300;margin-top:6px;line-height:1.45}
+  .stage .mark{position:absolute;top:14px;right:15px;font-size:11px;letter-spacing:.1em}
+  .stage--done .mark{color:var(--ember)}
+  .stage--todo .mark{color:var(--muted)}
+  .foot-note{margin-top:24px;font-size:10.5px;color:var(--muted);font-weight:300;letter-spacing:.03em;max-width:640px}
+  .foot-note b{color:var(--ink-soft);font-weight:500}
+
+  /* load-in */
+  .reveal{opacity:0;transform:translateY(14px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  @media(max-width:760px){
+    body{padding:40px 20px 70px}
+    .arrow{flex-basis:100%;height:24px;width:1px;margin:6px auto;align-self:center;background:var(--hair)}
+    .arrow::after{right:50%;top:auto;bottom:0;transform:translateX(50%);
+      border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--ink-soft);border-bottom:0}
+    .arrow--em::after{border-top-color:var(--ember)}
+    .judges,.roadmap{grid-template-columns:repeat(2,1fr)}
+    .node{flex-basis:100%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="reveal">
+    <div class="kicker">AgentCI · System Architecture · as built</div>
+    <h1>Regression&nbsp;CI<br>for an <em>AI agent</em>.</h1>
+    <p class="lede">A support agent under test, wrapped in a deterministic eval harness. Today the runtime and the scoring loop exist end-to-end; the self-improvement engineer and its surfaces come next.</p>
+    <div class="decisions">
+      <span class="chip">target · <b>gemini-2.5-flash</b></span>
+      <span class="chip">judge · <b>gemini-2.5-pro</b></span>
+      <span class="chip"><b>temp 0</b> · pinned (D7)</span>
+      <span class="chip">split <b>24 / 16</b> (D3)</span>
+      <span class="chip">pass · <b>all dims ≥ 0.7</b> (D9)</span>
+      <span class="chip"><b>26</b> tests · offline</span>
+    </div>
+  </header>
+
+  <!-- ===================== RUNTIME LANE ===================== -->
+  <section class="lane reveal" style="animation-delay:.08s">
+    <div class="lane-head">
+      <span class="lane-no">01</span>
+      <span class="lane-title">Runtime — the target agent</span>
+      <span class="lane-sub">a "candidate" = a different prompt string</span>
+    </div>
+
+    <div class="flow">
+      <div class="node node--in">
+        <span class="tag">input</span>
+        <h3>Support ticket</h3>
+        <p>SaaS-billing question, plain text</p>
+      </div>
+      <div class="arrow"></div>
+      <div class="node">
+        <span class="tag">entrypoint</span>
+        <h3>answer_ticket()</h3>
+        <p>(prompt, ticket) — single cached call</p>
+      </div>
+      <div class="arrow"></div>
+      <div class="node">
+        <span class="tag">adk agent</span>
+        <h3>support_agent</h3>
+        <p>config-driven prompt · flash · temp 0</p>
+      </div>
+      <div class="arrow arrow--em"></div>
+      <div class="node node--out">
+        <span class="tag">output</span>
+        <h3>{ "answer" }</h3>
+        <p>grounded, policy-citing reply</p>
+      </div>
+    </div>
+
+    <div class="subflow">
+      <span class="branch-label">tool call</span>
+      <div class="mini">support_agent<span>requests knowledge</span></div>
+      <div class="arrow"></div>
+      <div class="mini">lookup_kb(query)<span>stop-word matched retrieval</span></div>
+      <div class="arrow"></div>
+      <div class="mini">kb.json<span>10 policy sections</span></div>
+    </div>
+
+    <div class="crosscut">
+      <div class="cc"><b>Record / replay cache (D7)</b> — wraps answer_ticket &amp; every judge call. replay · record · live. Makes tests &amp; the demo deterministic.</div>
+      <div class="cc"><b>Phoenix tracing</b> — phoenix.otel.register + OpenInference auto-instrument streams LLM &amp; tool spans to Phoenix Cloud.</div>
+    </div>
+  </section>
+
+  <div class="interlink reveal" style="animation-delay:.16s">
+    <div class="v"></div>
+    run_candidate runs the same answer_ticket over a dataset partition
+  </div>
+
+  <!-- ===================== EVAL LANE ===================== -->
+  <section class="lane reveal" style="animation-delay:.2s">
+    <div class="lane-head">
+      <span class="lane-no">02</span>
+      <span class="lane-title">Evaluation — dataset &amp; judges</span>
+      <span class="lane-sub">Phoenix dataset + experiment</span>
+    </div>
+
+    <div class="flow">
+      <div class="node node--in">
+        <span class="tag">dataset</span>
+        <h3>Support suite</h3>
+        <p>40 gold tickets · 24 tune / 16 held-out · KB embedded → Phoenix</p>
+      </div>
+      <div class="arrow"></div>
+      <div class="node">
+        <span class="tag">experiment</span>
+        <h3>run_candidate()</h3>
+        <p>prompt × split → Phoenix experiment over each case</p>
+      </div>
+      <div class="arrow"></div>
+      <div class="node" style="flex:2 1 300px">
+        <span class="tag">llm-as-judge (D6)</span>
+        <h3>4 rubric judges</h3>
+        <div class="judges" style="margin-top:8px">
+          <div class="judge"><div class="d">correctness</div><div class="s">vs gold · 0–1</div></div>
+          <div class="judge"><div class="d">groundedness</div><div class="s">vs KB · 0–1</div></div>
+          <div class="judge"><div class="d">completeness</div><div class="s">resolves? · 0–1</div></div>
+          <div class="judge"><div class="d">policy_ref</div><div class="s">cites? · 0–1</div></div>
+        </div>
+      </div>
+      <div class="arrow arrow--em"></div>
+      <div class="node node--out">
+        <span class="tag">per-case rows</span>
+        <h3>scores + passed</h3>
+        <p>{id, split, answer, scores, passed} — pass = all ≥ 0.7</p>
+      </div>
+    </div>
+
+    <div class="crosscut">
+      <div class="cc"><b>Baseline experiment</b> — the tune-split run that every future candidate is diffed against (the regression signal feeding Plan 03).</div>
+      <div class="cc"><b>Fail-loud scoring</b> — a missing judge score warns rather than silently reading as a regression at the gate.</div>
+    </div>
+  </section>
+
+  <!-- ===================== STATUS ===================== -->
+  <section class="status reveal" style="animation-delay:.28s">
+    <h2>Where the build stands</h2>
+    <div class="roadmap">
+      <div class="stage stage--done">
+        <span class="mark">✓ built</span>
+        <div class="pn">01</div>
+        <div class="nm">Target agent + tracing</div>
+        <div class="ds">ADK agent, KB tool, cached entrypoint, Phoenix spans, determinism cache.</div>
+      </div>
+      <div class="stage stage--done">
+        <span class="mark">✓ built</span>
+        <div class="pn">02</div>
+        <div class="nm">Dataset + eval harness</div>
+        <div class="ds">40-ticket suite, 60/40 split, 4 LLM judges, per-case scores, baseline.</div>
+      </div>
+      <div class="stage stage--todo">
+        <span class="mark">next</span>
+        <div class="pn">03</div>
+        <div class="nm">Engineer loop + MCP</div>
+        <div class="ds">Compare via Phoenix MCP → cluster → fix → mint → prove held-out lift → gate.</div>
+      </div>
+      <div class="stage stage--todo">
+        <span class="mark">next</span>
+        <div class="pn">04</div>
+        <div class="nm">Surface — CLI + dashboard</div>
+        <div class="ds">`agentci check` and a single-page dashboard evidencing the full loop.</div>
+      </div>
+    </div>
+    <p class="foot-note"><b>Deterministic &amp; offline-tested</b> — 26 passing tests cover all non-LLM logic via the record/replay cache. The live paths (Gemini generation, Phoenix upload, baseline experiment) are wired and introspected against the installed SDKs, and run once credentials are supplied.</p>
+  </section>
+
+</div>
+</body>
+</html>
