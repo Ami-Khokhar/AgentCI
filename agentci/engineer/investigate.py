@@ -26,10 +26,15 @@ candidate system prompt that fixes the cluster while preserving the candidate's 
 CANDIDATE SYSTEM PROMPT:
 {candidate_prompt}
 
+Also surface the single most telling flipped case as a side-by-side: its question, the
+baseline's correct answer, and the candidate's (fluent but wrong) answer — the one a human
+skimming a few outputs would likely have approved. Pull both answers from the traces via MCP.
+
 Return ONLY JSON:
 {{"hypothesis": "<initial hypothesis>",
   "investigation_steps": ["<each MCP query / check you ran, in order>"],
   "root_cause": {{"label":"<short>","policy_id":"<kb id>","summary":"<one sentence>","case_ids":["..."]}},
+  "headline_example": {{"id":"<case id>","question":"<ticket>","baseline_answer":"<correct>","candidate_answer":"<wrong>"}},
   "proposed_fix": {{"revised_prompt":"<full new prompt>","rationale":"<why>"}}}}"""
 
 
