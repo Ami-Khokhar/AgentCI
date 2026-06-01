@@ -8,6 +8,8 @@ demo replays the captured trajectory deterministically.
 """
 import asyncio
 import json
+import sys
+import types
 import uuid
 
 from agentci import cache
@@ -78,3 +80,18 @@ def investigate(candidate_prompt: str, label: str, pass_to_fail: list[str]) -> d
         return data
 
     return cache.cached("investigation", payload, live)
+
+
+# Make this module callable so that ``from agentci.engineer import investigate``
+# returns a module-like object that can also be called directly as
+# ``investigate(prompt, label, ptf)`` — used by run_check — while also exposing
+# ``.investigate`` and ``._parse_investigation`` for direct test access.
+class _CallableModule(types.ModuleType):
+    investigate = staticmethod(investigate)
+    _parse_investigation = staticmethod(_parse_investigation)
+
+    def __call__(self, candidate_prompt: str, label: str, pass_to_fail: list[str]) -> dict:
+        return investigate(candidate_prompt, label, pass_to_fail)
+
+
+sys.modules[__name__] = _CallableModule(__name__, __doc__)
