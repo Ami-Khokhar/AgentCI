@@ -3,14 +3,14 @@ from agentci.engineer.battery import build_confusion_matrix
 def test_confusion_matrix_counts():
     reports = {
         "reg_refund.txt": {"regression_detected": True},
-        "reg_routing.txt": {"regression_detected": True},
+        "reg_overrefusal.txt": {"regression_detected": True},
         "benign_reword.txt": {"regression_detected": False},
         "benign_format.txt": {"regression_detected": False},
         "improve_cite.txt": {"regression_detected": False},
         "improve_clarify.txt": {"regression_detected": False},
     }
     labels = {
-        "reg_refund.txt": "regressive", "reg_routing.txt": "regressive",
+        "reg_refund.txt": "regressive", "reg_overrefusal.txt": "regressive",
         "benign_reword.txt": "benign", "benign_format.txt": "benign",
         "improve_cite.txt": "improving", "improve_clarify.txt": "improving",
     }

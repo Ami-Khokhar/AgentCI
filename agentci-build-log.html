@@ -319,6 +319,24 @@
     </ul>
   </div>
 
+  <!-- =================== ENTRY =================== -->
+  <div class="entry">
+    <h2>Design lock-in — post-critique reframe <span class="badge b-warn">DECISIONS</span></h2>
+    <div class="ts">after Plan 03 · before Plan 04</div>
+    <h3>What changed</h3>
+    <ul>
+      <li><strong>Reframe (Change 1 → D11):</strong> the product is now a Gemini <em>Regression Investigator agent</em> that runs a genuine reason-act loop over Phoenix MCP, not a pipeline with bolted-on LLM calls. Locked as a decision; the agentic rewrite of the Engineer is the next build sprint.</li>
+      <li><strong>Human-approved promotion &amp; mint (Change 3 → D12):</strong> the loop proposes-and-proves; the engineer approves. Mint + promotion move behind approval (folded into the Change-1 rewrite to avoid a throwaway edit to the current auto-mint path).</li>
+      <li><strong>Two distinct regression kinds (Change 4 → D4):</strong> renamed <code>reg_routing.txt</code> → <code>reg_overrefusal.txt</code> and rewrote it as an over-refusal regression (routes/declines tickets the KB covers) — a different flavor from the refund factual-omission, so one investigator handling both demonstrates generalization. <span class="files">50 tests still green</span></li>
+      <li><strong>OSS license (Change 5 → D13):</strong> added <code>LICENSE</code> (MIT) — a gate-zero submission requirement, now satisfied.</li>
+      <li><strong>Demo built backward from one beat (Change 6 → D14):</strong> the fluent-confident-wrong refund answer beside the correct one, then the investigator catching it via MCP. Becomes the design brief for Plan 04.</li>
+    </ul>
+    <h3>Deliberately NOT adopted</h3>
+    <div class="reason">Judge-noise confidence intervals (run N×, gate on CI) were declined: at temperature 0 (D7) there is no variance to build a distribution from, so it would require abandoning the deterministic record/replay demo anchor — which Change 6 depends on. The honest resolution (sample only the judge at temp&gt;0, keep the target deterministic) is a real revision of D6/D7 and was left out of this lock-in.</div>
+    <h3>Reasoning</h3>
+    <div class="reason">Locked the cheap, non-conflicting items now (license, second regression) and recorded the structural decisions (D11/D12/D14) in the frozen-decisions contract. The heavy Change-1 rewrite of <code>run_check</code> into a true reason-act loop is sequenced as the next sprint so it goes through the normal TDD/subagent flow rather than being rushed inline — and so D12 (mint-on-approve) rides along with it instead of being edited twice.</div>
+  </div>
+
   <!-- NEW-ENTRY-ANCHOR -->
 
 </main>

@@ -10,20 +10,28 @@
 
 ## Frozen decisions (from spec refinement on 2026-06-01)
 
+> **Design revision — 2026-06-01 (post-critique lock-in).** The product is reframed from "an eval pipeline that contains an agent" to **a Gemini Regression Investigator agent** that autonomously investigates its own regressions through Phoenix MCP, the way an SRE would. Newly locked: D11 (agentic investigator), D12 (human-approved promotion & mint), D14 (demo built backward from one beat), and an OSS license (D13, gate-zero). D4/D5/D8 amended below. **Not adopted:** judge-noise confidence intervals (would require abandoning D7 temperature-0 determinism; deferred). These supersede earlier rows where they conflict.
+
 | # | Decision | Value |
 |---|----------|-------|
 | D1 | **MCP architecture** | Engineer is ADK code that loads `@arizeai/phoenix-mcp` as a native ADK `McpToolset` (in-process MCP **client**), run **locally** for the demo. Cloud Run deploy = stretch goal, not on the critical path. |
 | D2 | **Plan structure** | 4 sub-plans, dependency order 01→04. |
 | D3 | **Synthetic data** | 40 tickets w/ gold resolutions, single domain (SaaS billing). 60/40 **tune/held-out** split → 24 tune / 16 held-out. Split is fixed and recorded in dataset metadata. |
-| D4 | **Candidate battery** | 6 labeled edits: 2 regressive, 2 benign, 2 improving. The headline refund-policy regression is one of the 2 regressive. |
-| D5 | **Minted eval cases** | Added to the **tune** partition only. NEVER counted toward held-out (would corrupt the held-out lift claim). |
+| D4 | **Candidate battery** | 6 labeled edits: 2 regressive, 2 benign, 2 improving. **The 2 regressive are deliberately different in kind** (Change 4): (a) headline refund-policy **factual omission**, (b) an **over-refusal** regression (routes/declines tickets the KB covers). One investigator characterizing both unlike failures *demonstrates* generalization rather than claiming it. |
+| D5 | **Minted eval cases** | Added to the **tune** partition only. NEVER counted toward held-out (would corrupt the held-out lift claim). **Minting is performed on human approval** (D12), not automatically — the run *proposes* the minted case; the engineer commits it. |
 | D6 | **Rubric** | All four dimensions (correctness, groundedness, resolution-completeness, policy-reference) are **LLM-as-judge**. No code-check rubric dimension. |
 | D7 | **Determinism** | Target agent + judge run at **temperature 0**, pinned model IDs. A **record/replay cache** lets the demo replay a captured real run. Judge stability is verified (GAP-5 mitigation). |
-| D8 | **Promotion bar** | A fix is promotable iff: held-out mean correctness lift ≥ `+0.05` over baseline **AND** zero held-out cases flip pass→fail. Otherwise the gate stays **RED** ("regression confirmed, no qualifying fix"). |
+| D8 | **Promotion bar** | A fix **qualifies** iff: held-out mean correctness lift ≥ `+0.05` over baseline **AND** zero held-out cases flip pass→fail. A non-qualifying fix keeps the gate **RED** ("regression confirmed, no qualifying fix"). Qualifying only makes a fix *eligible* — actual promotion is human-approved (D12). |
 | D9 | **Pass threshold** | A per-case dimension "passes" iff judge score ≥ `0.7` (scores are 0–1). A case "passes overall" iff all four dimensions pass. |
 | D10 | **Regression flag** | A candidate is flagged as a regression iff ≥ 1 tune-partition case flips pass→fail vs. baseline. Benign edits must produce **zero** pass→fail flips → gate stays green. |
+| D11 | **Agentic investigator (Change 1)** | The deliverable is a single Gemini-powered **Regression Investigator agent**. When the gate goes red it runs a genuine **reason-act loop**: forms a hypothesis ("refund tickets look worse"), decides which experiments/traces to pull, queries them through Phoenix MCP, checks whether the pattern holds, refines, then writes the root-cause story — tool calls are **not pre-scripted**. The CI scaffolding around it (trigger on prompt change, run the eval set, gate math) stays deterministic and dumb. Demo reproducibility comes from recording the agent's real trajectory and replaying it (D7 cache), not from scripting the loop. |
+| D12 | **Human-approved promotion & mint (Change 3)** | The loop **proposes and proves** (generates a candidate fix, validates it on held-out, presents before/after); the **engineer approves**. Promotion and eval-case minting (D5) happen on approval, never auto-merged. Satisfies the hackathon's "under your oversight" theme. |
+| D13 | **OSS license (Change 5, gate-zero)** | The public repo carries a detectable OSS license (**MIT**). This is a submission disqualifier, not a score deduction. |
+| D14 | **Demo built backward from one beat (Change 6)** | The video lives on one gotcha: the fluent, confident, **wrong** refund answer shown beside the old correct one (the answer a human skimming five outputs would have approved), then the investigator catching exactly that case via Phoenix MCP and naming the cause in plain English. Plan 04's surface is designed to make that 20-second beat land. |
 
 > Decisions are the contract. If execution forces a change, STOP and update this table before deviating (per `executing-plans` deviation protocol).
+>
+> **Build status vs. these decisions:** Plans 01–03 are built/merged and implement D1–D10 (the Engineer loop currently runs as deterministic Python orchestration with single-shot LLM calls). D11 (agentic rewrite of the investigation) and D14 (demo-driven Plan 04) are the **next build sprint**; D12 folds into that rewrite (mint-on-approve), avoiding a throwaway edit to the current auto-mint path. D4's over-refusal regression and D13's license are locked in now.
 
 ---
 
