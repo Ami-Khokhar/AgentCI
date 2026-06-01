@@ -40,7 +40,12 @@ def _judge(dimension: str, output: dict, expected: dict, metadata: dict) -> floa
     answer = (output or {}).get("answer", "")
     gold = (expected or {}).get("gold_resolution", "")
     kb = (metadata or {}).get("kb", "")
-    payload = {"dimension": dimension, "output": answer, "expected": gold, "kb": kb}
+    policy_id = (metadata or {}).get("policy_id", "")
+    # policy_id is part of the prompt (esp. for policy_reference), so it must be
+    # part of the cache key — otherwise two cases identical except for expected
+    # policy would collide and replay the wrong score.
+    payload = {"dimension": dimension, "output": answer, "expected": gold,
+               "kb": kb, "policy_id": policy_id}
 
     def live():
         client = genai.Client()

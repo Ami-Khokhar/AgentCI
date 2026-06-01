@@ -12,8 +12,9 @@ API confirmation (arize-phoenix-client installed version):
 - Scores are extracted by joining evaluation_runs onto task_runs via
   eval_run.experiment_run_id == task_run["id"], grouped by evaluator name.
 """
+import warnings
+
 from phoenix.client import Client
-from phoenix.client.resources.datasets import Dataset
 
 from agentci import config
 from agentci.evals.judges import ALL_EVALUATORS
@@ -42,7 +43,8 @@ def _client() -> Client:
 def run_candidate(prompt: str, dataset_name: str, split: str, experiment_name: str) -> list[dict]:
     """Run the target agent (with `prompt`) over `split` of the dataset as a Phoenix experiment.
 
-    Returns normalized per-case rows: {"id","split","scores":{dim:float},"passed":bool}.
+    Returns normalized per-case rows:
+    {"id","split","answer","scores":{dim:float},"passed":bool}.
 
     API notes (no .as_dataframe() — RanExperiment is a TypedDict):
     - get_dataset uses `dataset=` kwarg (not `name=`)
@@ -87,12 +89,25 @@ def run_candidate(prompt: str, dataset_name: str, split: str, experiment_name: s
         if md.get("split") != split:
             continue
         output = task_run.get("output") or {}
+        run_scores = scores_by_run_id.get(run_id, {})
+        # A missing dimension means the judge errored / produced no score. We
+        # still record 0.0 (so it counts as a fail, not a pass), but warn loudly
+        # so an eval-infra failure isn't silently read as a real regression by
+        # the promotion gate (D8) downstream.
+        missing = [d for d in config.RUBRIC_DIMENSIONS if d not in run_scores]
+        if missing:
+            warnings.warn(
+                f"experiment {experiment_name!r}: run {run_id} missing judge "
+                f"scores for {missing}; recording 0.0 (possible eval failure, "
+                f"not necessarily a regression)",
+                stacklevel=2,
+            )
         raw.append({
             "id": md.get("id"),
             "split": md.get("split"),
             "answer": output.get("answer", "") if isinstance(output, dict) else "",
             "scores": {
-                dim: scores_by_run_id.get(run_id, {}).get(dim, 0.0)
+                dim: run_scores.get(dim, 0.0)
                 for dim in config.RUBRIC_DIMENSIONS
             },
         })
