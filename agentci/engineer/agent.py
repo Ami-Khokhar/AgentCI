@@ -4,6 +4,7 @@ import os
 from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from google.genai import types
 from mcp import StdioServerParameters
 
 from agentci import config
@@ -37,4 +38,7 @@ def build_engineer_agent() -> LlmAgent:
         description="Detects regressions, root-causes, and proposes fixes for target agents.",
         instruction=ENGINEER_INSTRUCTION,
         tools=[phoenix_tools],
+        # Pin temperature to 0 so the recorded investigation trajectory is deterministic
+        # (D7) — matches the target agent; replay then reproduces it exactly.
+        generate_content_config=types.GenerateContentConfig(temperature=config.TEMPERATURE),
     )

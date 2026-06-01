@@ -1,8 +1,6 @@
 """Engineer package: orchestrates one AgentCI check run."""
 from agentci import config
 from agentci.engineer.compare import fetch_baseline_via_mcp, compute_flips, is_regression
-from agentci.engineer.cluster import cluster_failures
-from agentci.engineer.fix import draft_fix
 from agentci.engineer.mint import build_minted_case, persist_minted_case
 from agentci.engineer.lift import evaluate_promotion
 from agentci.engineer.report import assemble_report
