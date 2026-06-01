@@ -28,3 +28,12 @@ def test_red_when_no_qualifying_fix():
                         mcp_calls=5)
     assert r["verdict"] == "red_no_fix"
     assert r["gate"] == "red"
+
+def test_report_carries_investigation_and_proposed_mint():
+    r = assemble_report("reg", True, {"pass_to_fail": ["t0"], "fail_to_pass": []},
+                        {"label": "x"}, {"revised_prompt": "p", "rationale": "r"},
+                        {"promotable": True, "lift": 0.2, "n": 16, "heldout_regressions": 0, "reason": "ok"},
+                        5, investigation={"hypothesis": "h", "mcp_calls": 5}, proposed_mint={"id": "minted-x"})
+    assert r["investigation"]["hypothesis"] == "h"
+    assert r["proposed_mint"]["id"] == "minted-x"
+    assert r["verdict"] == "green_promotable_fix"

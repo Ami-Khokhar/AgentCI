@@ -43,3 +43,15 @@ def persist_minted_case(case: dict, dataset_name: str | None = None) -> None:
         output_keys=["gold_resolution"],
         metadata_keys=["policy_id", "split", "source", "kb", "id"],
     )
+
+
+def approve_and_mint(report: dict, dataset_name: str | None = None) -> dict | None:
+    """Persist the report's proposed minted case on human approval (D12).
+
+    Returns the minted case that was persisted, or None if the report has nothing to mint.
+    """
+    case = report.get("proposed_mint")
+    if not case:
+        return None
+    persist_minted_case(case, dataset_name)
+    return case

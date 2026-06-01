@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentCI · Regression Investigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF6; --ink:#16140F; --ink-soft:#5C574C; --muted:#9A9286;
+    --hair:rgba(22,20,15,.16); --hair-soft:rgba(22,20,15,.07);
+    --ember:#C2410C; --ember-soft:rgba(194,65,12,.10);
+    --green:#3f7d4e; --green-soft:rgba(63,125,78,.12);
+    --red:#b3261e; --red-soft:rgba(179,38,30,.10);
+    --card:rgba(255,255,255,.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"JetBrains Mono",monospace; background-color:var(--paper);
+    background-image:radial-gradient(rgba(22,20,15,.05) 1px,transparent 1px);
+    background-size:24px 24px; color:var(--ink); line-height:1.55; padding:48px 32px 96px;
+  }
+  .wrap{max-width:1000px;margin:0 auto}
+  .kicker{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);
+    display:flex;gap:12px;align-items:center;margin-bottom:14px}
+  .kicker::before{content:"";width:26px;height:1px;background:var(--ember)}
+  h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:clamp(38px,6vw,62px);
+    line-height:.96;letter-spacing:-.01em;margin-bottom:18px}
+  h1 em{font-style:italic;color:var(--ember)}
+  .runbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:34px;font-size:12px}
+  .runbar select{font-family:inherit;font-size:12px;background:var(--card);border:1px solid var(--hair);
+    border-radius:3px;padding:5px 9px;color:var(--ink)}
+  .gate{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:12px;
+    letter-spacing:.08em;text-transform:uppercase;padding:5px 13px;border-radius:2px;border:1px solid}
+  .gate.green{color:var(--green);background:var(--green-soft);border-color:rgba(63,125,78,.4)}
+  .gate.red{color:var(--red);background:var(--red-soft);border-color:rgba(179,38,30,.4)}
+  .badge{font-size:11px;color:var(--ink-soft);border:1px solid var(--hair);
+    padding:4px 10px;border-radius:20px;background:var(--card)}
+  .badge b{color:var(--ember);font-weight:600}
+
+  section{margin-bottom:30px}
+  .step-label{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);
+    margin-bottom:12px;display:flex;align-items:center;gap:10px}
+  .step-label .n{font-family:"Instrument Serif",serif;font-size:22px;color:var(--ember);line-height:1}
+  h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:27px;margin-bottom:6px}
+  .sub{color:var(--ink-soft);font-size:12.5px;font-weight:300;margin-bottom:16px;max-width:680px}
+
+  /* gotcha side-by-side */
+  .beat{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ans{border:1px solid var(--hair);border-radius:4px;background:var(--card);padding:16px 18px;position:relative}
+  .ans.wrong{border-color:rgba(179,38,30,.45);background:var(--red-soft)}
+  .ans.right{border-color:rgba(63,125,78,.4);background:var(--green-soft)}
+  .ans .tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:9px;font-weight:600}
+  .ans.wrong .tag{color:var(--red)} .ans.right .tag{color:var(--green)}
+  .ans .txt{font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .ans .stamp{position:absolute;top:14px;right:16px;font-size:10px;letter-spacing:.08em;color:var(--muted)}
+  .q{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;padding:10px 14px;
+    border-left:2px solid var(--ink);background:var(--hair-soft);border-radius:0 4px 4px 0}
+  .q b{color:var(--ink);font-weight:600}
+  .skim{font-size:12px;color:var(--muted);font-style:italic;margin-top:12px;text-align:center}
+
+  /* catch / investigation */
+  .panel{border:1px solid var(--hair);border-radius:4px;background:var(--card);padding:18px 20px}
+  .hyp{font-size:14px;margin-bottom:14px}
+  .hyp .lead{color:var(--ember);font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:5px}
+  .steps{list-style:none;counter-reset:s;margin:6px 0}
+  .steps li{counter-increment:s;font-size:12.5px;color:var(--ink-soft);padding:6px 0 6px 34px;position:relative;border-bottom:1px dashed var(--hair-soft)}
+  .steps li:last-child{border-bottom:0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:6px;width:22px;height:22px;
+    border:1px solid var(--ember);color:var(--ember);border-radius:50%;font-size:10px;
+    display:flex;align-items:center;justify-content:center}
+  .rootcause{margin-top:14px;padding:12px 14px;border-left:3px solid var(--ember);
+    background:var(--ember-soft);border-radius:0 4px 4px 0;font-size:13px}
+  .rootcause b{font-weight:600}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .metric{border:1px solid var(--hair);border-radius:4px;background:var(--card);padding:16px 18px}
+  .metric .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .metric .v{font-family:"Instrument Serif",serif;font-size:30px;line-height:1}
+  .metric .v.pos{color:var(--green)} .metric .v.neg{color:var(--red)}
+  .metric .d{font-size:11.5px;color:var(--ink-soft);margin-top:8px;font-weight:300}
+  pre.fix{font-size:12px;white-space:pre-wrap;background:#1c1a16;color:#e9e2d4;border-radius:4px;
+    padding:14px 16px;margin-top:10px;line-height:1.55;overflow:auto}
+
+  /* decision */
+  .decision{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  button{font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.03em;cursor:pointer;
+    border-radius:3px;padding:11px 22px;border:1px solid;transition:transform .15s,box-shadow .15s}
+  button:hover{transform:translateY(-2px)}
+  .approve{background:var(--green);color:#fff;border-color:var(--green);box-shadow:4px 4px 0 -1px var(--green-soft)}
+  .reject{background:transparent;color:var(--ink-soft);border-color:var(--hair)}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .approve-note{font-size:12px;color:var(--ink-soft)}
+  .toast{margin-top:14px;font-size:13px;padding:10px 14px;border-radius:4px;display:none}
+  .toast.ok{display:block;background:var(--green-soft);color:var(--green);border:1px solid rgba(63,125,78,.4)}
+  .toast.err{display:block;background:var(--red-soft);color:var(--red);border:1px solid rgba(179,38,30,.4)}
+
+  .empty{color:var(--muted);font-size:13px;padding:40px 0}
+  .divider{height:1px;background:var(--hair);margin:34px 0}
+  @media(max-width:720px){.beat,.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">AgentCI · Regression Investigator</div>
+  <h1>The agent caught what a<br>human <em>would have shipped</em>.</h1>
+
+  <div class="runbar">
+    <span>run:</span>
+    <select id="runSelect" onchange="location.search='?run='+this.value"></select>
+    <span id="gateChip"></span>
+    <span class="badge" id="mcpBadge"></span>
+    <span class="badge" id="verdictBadge"></span>
+  </div>
+
+  <div id="content"><div class="empty">Loading run…</div></div>
+</div>
+
+<script>
+const qs = new URLSearchParams(location.search);
+let LABEL = qs.get("run");
+
+const esc = s => (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+async function boot(){
+  const runs = await fetch("/api/runs").then(r=>r.json()).catch(()=>[]);
+  const sel = document.getElementById("runSelect");
+  sel.innerHTML = runs.map(r=>`<option ${r===LABEL?"selected":""}>${esc(r)}</option>`).join("");
+  if(!LABEL && runs.length){ LABEL = runs[0]; }
+  if(!LABEL){ document.getElementById("content").innerHTML='<div class="empty">No runs yet. Try <code>agentci check --candidate candidates/reg_refund.txt</code>.</div>'; return; }
+  if(![...sel.options].some(o=>o.value===LABEL)) sel.insertAdjacentHTML("afterbegin",`<option selected>${esc(LABEL)}</option>`);
+  render(await fetch("/api/report/"+encodeURIComponent(LABEL)).then(r=>r.json()));
+}
+
+function render(rep){
+  const gate = rep.gate || "?";
+  document.getElementById("gateChip").outerHTML =
+    `<span id="gateChip" class="gate ${gate}">${gate==="green"?"● GREEN":"● RED"}</span>`;
+  document.getElementById("mcpBadge").innerHTML = `MCP calls · <b>${esc(rep.mcp_calls)}</b>`;
+  document.getElementById("verdictBadge").textContent = (rep.verdict||"").replace(/_/g," ");
+
+  const inv = rep.investigation || {};
+  const ex = inv.headline_example || null;
+  const prom = rep.promotion || null;
+  const fix = rep.proposed_fix || null;
+  let h = "";
+
+  if(!rep.regression_detected){
+    h += `<section><div class="step-label"><span class="n">✓</span> No regression</div>
+      <h2>This candidate is safe to ship.</h2>
+      <div class="sub">No tune-set case flipped pass→fail versus the baseline. The gate stays green.</div></section>`;
+  } else {
+    // 1 — the gotcha
+    h += `<section><div class="step-label"><span class="n">1</span> The gotcha</div>
+      <h2>Fluent. Confident. Wrong.</h2>
+      <div class="sub">The candidate's answer reads fine — it's the one a reviewer skimming five outputs would have approved. It silently dropped what the policy requires.</div>`;
+    if(ex){
+      h += `<div class="q"><b>Ticket ${esc(ex.id)}:</b> ${esc(ex.question)}</div>
+        <div class="beat">
+          <div class="ans wrong"><div class="stamp">candidate</div><div class="tag">✗ shipped answer</div><div class="txt">${esc(ex.candidate_answer)}</div></div>
+          <div class="ans right"><div class="stamp">baseline</div><div class="tag">✓ correct answer</div><div class="txt">${esc(ex.baseline_answer)}</div></div>
+        </div>
+        <div class="skim">a human skimming a few outputs would have approved the one on the left.</div>`;
+    } else {
+      h += `<div class="q">Flipped cases (pass→fail on the tune set): <b>${(rep.flips?.pass_to_fail||[]).map(esc).join(", ")||"—"}</b></div>`;
+    }
+    h += `</section><div class="divider"></div>`;
+
+    // 2 — the catch
+    h += `<section><div class="step-label"><span class="n">2</span> The investigation</div>
+      <h2>The agent investigated it through Phoenix MCP.</h2>
+      <div class="sub">Not a script — a reason-act loop: it formed a hypothesis, pulled the experiments and traces it needed via MCP, checked the pattern, and named the cause.</div>
+      <div class="panel">
+        <div class="hyp"><span class="lead">Hypothesis</span>${esc(inv.hypothesis)||"—"}</div>
+        <ol class="steps">${(inv.investigation_steps||[]).map(s=>`<li>${esc(s)}</li>`).join("")||"<li>—</li>"}</ol>
+        <div class="rootcause"><b>Root cause —</b> ${esc(inv.root_cause?.summary)||"—"} <span style="color:var(--muted)">(policy: ${esc(inv.root_cause?.policy_id)||"?"}, cases: ${(inv.root_cause?.case_ids||[]).map(esc).join(", ")||"—"})</span></div>
+      </div></section><div class="divider"></div>`;
+
+    // 3 — the proof
+    h += `<section><div class="step-label"><span class="n">3</span> The proof</div>
+      <h2>It proposed a fix and proved it on held-out data.</h2>
+      <div class="grid2">`;
+    const lift = prom ? prom.lift : null;
+    h += `<div class="metric"><div class="k">Held-out correctness lift</div>
+        <div class="v ${lift>=0.05?"pos":"neg"}">${lift==null?"—":(lift>=0?"+":"")+lift}</div>
+        <div class="d">${esc(prom?.reason)||""}</div></div>
+      <div class="metric"><div class="k">Held-out regressions</div>
+        <div class="v ${(prom?.heldout_regressions)?"neg":"pos"}">${prom?prom.heldout_regressions:"—"}</div>
+        <div class="d">on ${prom?prom.n:"—"} held-out cases the fix never trained on</div></div></div>`;
+    if(fix){
+      h += `<div class="metric" style="margin-top:14px"><div class="k">Proposed fix — ${esc(fix.rationale)}</div>
+        <pre class="fix">${esc(fix.revised_prompt)}</pre></div>`;
+    }
+    h += `</section><div class="divider"></div>`;
+
+    // 4 — the decision
+    h += `<section><div class="step-label"><span class="n">4</span> Your call</div>
+      <h2>${gate==="green"?"Approve to mint the guard case.":"Regression confirmed — no qualifying fix."}</h2>
+      <div class="sub">${gate==="green"
+        ? "Approving promotes the fix and mints a permanent eval case (tune partition) so this exact regression can never silently return."
+        : "The gate stays red: a fix was attempted but did not clear the held-out bar. Nothing is promoted."}</div>`;
+    if(gate==="green" && rep.proposed_mint){
+      h += `<div class="decision">
+        <button class="approve" id="approveBtn" onclick="approve()">Approve &amp; mint guard case</button>
+        <button class="reject" onclick="document.getElementById('rejectToast').className='toast ok'">Reject</button>
+        <span class="approve-note">will mint <code>${esc(rep.proposed_mint.id)}</code></span></div>
+        <div class="toast" id="approveToast"></div>
+        <div class="toast" id="rejectToast">Rejected — nothing promoted, nothing minted.</div>`;
+    }
+    if(rep.minted){ h += `<div class="toast ok" style="display:block">✓ Minted <code>${esc(rep.minted.id)}</code> into the tune partition.</div>`; }
+    h += `</section>`;
+  }
+  document.getElementById("content").innerHTML = h;
+}
+
+async function approve(){
+  const btn = document.getElementById("approveBtn"); btn.disabled = true;
+  const t = document.getElementById("approveToast");
+  try{
+    const r = await fetch("/api/approve/"+encodeURIComponent(LABEL), {method:"POST"});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||"approve failed");
+    t.className="toast ok"; t.innerHTML = `✓ Minted <code>${esc(d.minted?.id)}</code> into the tune partition. This regression is now guarded forever.`;
+  }catch(e){ t.className="toast err"; t.textContent = "✗ "+e.message; btn.disabled=false; }
+}
+boot();
+</script>
+</body>
+</html>
