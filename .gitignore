@@ -1,0 +1,18 @@
+# Local agent/editor state
+.claude/
+
+# AgentCI runtime artifacts (created when plans are executed)
+.agentci_cache/
+runs/
+promoted/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
