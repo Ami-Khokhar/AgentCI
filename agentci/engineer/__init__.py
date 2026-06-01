@@ -8,7 +8,7 @@ from agentci.engineer.lift import evaluate_promotion
 from agentci.engineer.report import assemble_report
 from agentci.evals.experiment import run_candidate
 from agentci.data.dataset import load_tickets
-import agentci.engineer.investigate as investigate
+from agentci.engineer.investigate import investigate
 
 _MCP_CALLS = {"n": 0}
 
