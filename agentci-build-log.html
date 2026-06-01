@@ -337,6 +337,26 @@
     <div class="reason">Locked the cheap, non-conflicting items now (license, second regression) and recorded the structural decisions (D11/D12/D14) in the frozen-decisions contract. The heavy Change-1 rewrite of <code>run_check</code> into a true reason-act loop is sequenced as the next sprint so it goes through the normal TDD/subagent flow rather than being rushed inline — and so D12 (mint-on-approve) rides along with it instead of being edited twice.</div>
   </div>
 
+  <!-- =================== ENTRY =================== -->
+  <div class="entry">
+    <h2>Plan 05 — Agentic Investigator + Surface <span class="badge b-done">DONE</span></h2>
+    <div class="ts">sprint · D11 / D12 / D14 · 3 implementer subagents + controller, opus review</div>
+    <h3>What was built</h3>
+    <ul>
+      <li><strong>D11 — Regression Investigator (the reframe):</strong> <code>investigate.py</code> drives the Engineer <code>LlmAgent</code> with an <em>open goal</em> — a genuine reason-act loop that chooses its own Phoenix MCP queries, root-causes the failure, and proposes a fix. The real MCP tool-call count is captured from the event stream and cached, so the demo replays the captured trajectory deterministically.</li>
+      <li><strong>run_check rewritten:</strong> deterministic detect → <em>agentic</em> investigate → deterministic held-out validate → report. Scripted <code>cluster.py</code>/<code>fix.py</code> are superseded by the agent.</li>
+      <li><strong>D12 — human-approved promotion:</strong> <code>run_check</code> no longer auto-mints; it proposes a minted case. <code>approve_and_mint</code> is reachable only through the dashboard's gated <code>POST /api/approve</code>.</li>
+      <li><strong>Surface:</strong> <code>agentci check</code> CLI (writes <code>runs/&lt;label&gt;.json</code>); FastAPI dashboard API; and a single-page dashboard built backward from the <strong>D14 demo beat</strong> — fluent-wrong vs correct answer side-by-side → the agent's MCP-driven investigation → held-out proof → Approve/Reject.</li>
+    </ul>
+    <h3>Things caught &amp; handled</h3>
+    <ul>
+      <li><strong>Overcomplication caught:</strong> an implementer resolved a module/function name clash with a <code>sys.modules</code> callable-module hack. I reverted it for the plain idiomatic import — simpler and not fragile.</li>
+      <li><strong>Final opus review (APPROVED_WITH_MINOR_NITS):</strong> verified under live probing that D11 is genuinely agentic, D12's mint path is airtight (single gated route), server path-traversal returns 404, and the dashboard escapes all report text (no XSS). Fixed two nits: pinned the engineer agent's temperature (D7 consistency on the record path) and removed dead imports.</li>
+    </ul>
+    <h3>Result</h3>
+    <ul><li><code>uv run pytest -q</code> → <strong>61 passed</strong>. Added a <code>README.md</code>. Live trajectory recording (data gen, baseline experiments, real MCP investigation) remains the credential-gated one-time <code>record</code> run.</li></ul>
+  </div>
+
   <!-- NEW-ENTRY-ANCHOR -->
 
 </main>
