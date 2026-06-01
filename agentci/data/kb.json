@@ -1,0 +1,52 @@
+[
+  {
+    "id": "refund-policy",
+    "title": "Refund Policy",
+    "body": "Customers may request a full refund within 14 calendar days of their most recent charge, provided the subscription is on a monthly billing plan. Annual plan subscribers are not eligible for full refunds; instead, they receive a prorated credit for the unused portion of their current billing cycle. Refund requests must be submitted through the billing portal or by contacting support with a valid reason. Once approved, refunds are processed within 5 business days and will appear on the original payment method."
+  },
+  {
+    "id": "billing-cycle",
+    "title": "Billing Cycle",
+    "body": "Monthly plans are billed on the same calendar date each month, beginning on the date of initial subscription activation. Annual plans are billed once per year on the anniversary of the subscription start date. If a billing date falls on a day that does not exist in a given month (e.g., the 31st), the charge will occur on the last day of that month. Customers can view their next billing date and amount in the Billing section of their account dashboard."
+  },
+  {
+    "id": "plan-upgrades",
+    "title": "Plan Upgrades",
+    "body": "Customers may upgrade to a higher-tier plan at any time; the upgrade takes effect immediately upon confirmation. For monthly plans, the billing difference is prorated based on the number of days remaining in the current billing cycle and charged immediately. For annual plans, the prorated difference for the remaining months is charged at the time of upgrade. Upgraded plan features, including additional seats and higher usage limits, are available instantly after the upgrade is confirmed."
+  },
+  {
+    "id": "plan-downgrades",
+    "title": "Plan Downgrades",
+    "body": "Customers may request a downgrade to a lower-tier plan, which takes effect at the start of the next billing cycle—downgrades are never applied mid-cycle. No credit or refund is issued for the difference in plan price for the current billing period. If the current usage (e.g., number of active seats) exceeds the limits of the new plan, customers must reduce usage before the downgrade can be confirmed. Downgrade requests can be submitted via the Plan Settings page and will be confirmed by email."
+  },
+  {
+    "id": "failed-payments",
+    "title": "Failed Payments",
+    "body": "If a payment fails, the system automatically retries the charge after 3 days, then again after 5 days, for a total of 3 attempts over 8 days. Customers receive an email notification after each failed attempt with instructions to update their payment method. If all three attempts fail, the account is suspended and access to paid features is revoked until the outstanding balance is settled. To reactivate a suspended account, customers must update their payment method and pay the overdue amount in the billing portal."
+  },
+  {
+    "id": "cancellation",
+    "title": "Cancellation",
+    "body": "Customers may cancel their subscription at any time through the Plan Settings page; cancellation takes effect at the end of the current billing period and no further charges will be made. Upon cancellation, customers retain access to all paid features until the period end date. Data is retained for 90 days after cancellation, after which it is permanently deleted unless the customer reactivates or exports their data. Cancellations cannot be undone once the billing period ends, but customers may re-subscribe at any time."
+  },
+  {
+    "id": "invoices",
+    "title": "Invoices and Receipts",
+    "body": "Invoices are automatically generated for every successful payment and are available for download in the Billing > Invoices section of the account dashboard. Each invoice includes the billing period, itemized charges, applicable taxes, and the payment method used. Invoices can also be forwarded to an alternative email address by adding a billing contact in the account settings. Customers requiring custom invoice details (e.g., a VAT number or company name) must update their billing profile before the invoice is generated, as invoices cannot be retroactively modified."
+  },
+  {
+    "id": "seat-management",
+    "title": "Seat Management",
+    "body": "Each plan tier includes a fixed number of user seats; adding seats beyond the plan limit requires upgrading to a higher tier or purchasing seat add-ons. Seat add-ons are billed monthly at a per-seat rate and are prorated when added mid-cycle. Removing seats takes effect at the start of the next billing cycle; the billing amount is adjusted accordingly. Account admins can manage seats—add, remove, or reassign—in the Team Settings section of the dashboard."
+  },
+  {
+    "id": "tax-vat",
+    "title": "Tax and VAT",
+    "body": "Sales tax and VAT are calculated based on the billing address on file and the applicable local tax regulations at the time of charge. Customers with a valid VAT registration number can enter it in the Billing Profile to have VAT removed from future invoices; this cannot be applied retroactively to previously issued invoices. U.S. customers may be subject to state-level sales tax depending on their state of residence. All displayed prices are exclusive of tax unless otherwise stated; the final tax amount is shown at checkout and on each invoice."
+  },
+  {
+    "id": "free-trial",
+    "title": "Free Trial",
+    "body": "New customers are eligible for a 14-day free trial on any monthly plan; no credit card is required to start the trial. At the end of the trial period, the account automatically converts to the selected paid plan and the first charge is made on the day after the trial ends. Customers who cancel before the trial ends will not be charged. Each email address is eligible for only one free trial; creating multiple accounts to extend trial access is a violation of the Terms of Service."
+  }
+]
