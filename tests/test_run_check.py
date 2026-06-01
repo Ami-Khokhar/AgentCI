@@ -15,7 +15,8 @@ def test_benign_candidate_returns_green(monkeypatch):
     assert report["verdict"] == "green_no_regression"
 
 def test_regressive_candidate_with_good_fix_promotes(monkeypatch):
-    # baseline passes everywhere; candidate fails t00 (tune) -> regression
+    # baseline passes tune but is weak on the held-out case the fix targets, so the
+    # fix shows genuine held-out lift; candidate fails t00 (tune) -> regression.
     def fake_run(prompt, ds, split, name):
         if "FIX" in prompt:                       # fixed prompt restores held-out
             return _rows(split, ["t00"] if split=="tune" else ["h0"], True)
@@ -23,7 +24,7 @@ def test_regressive_candidate_with_good_fix_promotes(monkeypatch):
             return _rows("tune", ["t00"], False)  # candidate regresses tune
         return _rows("held_out", ["h0"], False)   # candidate also bad on held-out
     monkeypatch.setattr(engineer, "fetch_baseline_via_mcp",
-                        lambda name: _rows("tune", ["t00"], True) + _rows("held_out", ["h0"], True))
+                        lambda name: _rows("tune", ["t00"], True) + _rows("held_out", ["h0"], False))
     monkeypatch.setattr(engineer, "run_candidate", fake_run)
     monkeypatch.setattr(engineer, "cluster_failures",
                         lambda cases: {"label": "refund-policy", "policy_id": "refund-policy",
