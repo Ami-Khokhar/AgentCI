@@ -1,0 +1,8 @@
+{
+  "reg_refund.txt": "regressive",
+  "reg_routing.txt": "regressive",
+  "benign_reword.txt": "benign",
+  "benign_format.txt": "benign",
+  "improve_cite.txt": "improving",
+  "improve_clarify.txt": "improving"
+}
