@@ -42,3 +42,19 @@ def build_engineer_agent() -> LlmAgent:
         # (D7) — matches the target agent; replay then reproduces it exactly.
         generate_content_config=types.GenerateContentConfig(temperature=config.TEMPERATURE),
     )
+
+
+_FIX_INSTRUCTION = """You are AgentCI's fix author. Given a root cause, you rewrite the candidate
+system prompt to fix it while preserving the candidate's intent. Return structured JSON when asked."""
+
+
+def build_fix_agent() -> LlmAgent:
+    """Fix-authoring agent (D19): no Phoenix MCP toolset — it works only from the supplied root
+    cause, so mounting MCP (an npx subprocess) would be dead weight."""
+    return LlmAgent(
+        name="agentci_fix_author",
+        model=config.ENGINEER_MODEL,
+        description="Writes one corrective edit to a candidate prompt from a root cause.",
+        instruction=_FIX_INSTRUCTION,
+        generate_content_config=types.GenerateContentConfig(temperature=config.TEMPERATURE),
+    )

@@ -23,3 +23,15 @@ Use ONLY the knowledge base returned by the `lookup_kb` tool to answer.
 Always cite the exact policy section you relied on. If the knowledge base does not
 cover the question, say you will route the ticket to a human and name the team.
 For refund questions, state the refund window and any eligibility conditions explicitly."""
+
+# --- Cross-family independence (D17/D18): the ruler must not share a brain with the optimizer ---
+IMPROVEMENT_JUDGE_MODEL = "claude-haiku-4-5-20251001"   # frozen held-out correctness ruler
+GUARD_REVIEWER_MODEL = "claude-haiku-4-5-20251001"      # adversarial rubric reviewer
+
+# --- Guard authoring/admission (D15/D18) ---
+FAILURE_TAXONOMY = (
+    "factual_omission", "over_refusal", "policy_miscite",
+    "hallucination", "format_regression",
+)
+GUARD_REVIEW_THRESHOLD = 0.7    # rubric reviewer score >= this to admit
+GUARD_REFINE_ATTEMPTS = 2       # how many times the agent may refine a rejected guard

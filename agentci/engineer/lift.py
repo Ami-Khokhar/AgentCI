@@ -1,6 +1,8 @@
 """Held-out lift computation and the promotion gate (D8)."""
 from agentci import config
 from agentci.engineer.compare import compute_flips
+from agentci.engineer.independent_judge import judge_correctness
+from agentci.evals.experiment import case_passed
 
 
 def mean_correctness(rows: list[dict]) -> float:
@@ -28,3 +30,20 @@ def evaluate_promotion(baseline_heldout: list[dict], fixed_heldout: list[dict]) 
         "promotable": promotable,
         "reason": reason,
     }
+
+
+def attach_independent_correctness(rows: list[dict], gold_by_id: dict[str, str]) -> list[dict]:
+    """Re-score each row's correctness with the independent-family ruler (D17), so the held-out
+    lift gate measures improvement on a brain the optimizer does not control. Also recomputes
+    ``passed`` from the re-scored dimensions, so the held-out pass->fail regression leg of the
+    promotion gate (D8) rides the cross-family ruler too — not just the lift average. Returns
+    new rows."""
+    out = []
+    for r in rows:
+        row = dict(r)
+        row["scores"] = dict(r["scores"])
+        gold = gold_by_id.get(r["id"], "")
+        row["scores"]["correctness"] = judge_correctness(r.get("answer", ""), gold)
+        row["passed"] = case_passed(row["scores"])
+        out.append(row)
+    return out

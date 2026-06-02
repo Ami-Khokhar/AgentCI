@@ -14,8 +14,9 @@ def _kb_text() -> str:
     return json.dumps(json.loads(_KB_PATH.read_text(encoding="utf-8")))
 
 
-def build_minted_case(cluster: dict, question: str, gold: str, index: int = 0) -> dict:
-    """Construct the new eval case row. Always split='tune', source='minted' (D5)."""
+def build_minted_case(cluster: dict, question: str, gold: str, index: int = 0, guard: dict | None = None) -> dict:
+    """Construct the new eval case row. Always split='tune', source='minted' (D5). Carries the
+    authored guard spec (D15) as a JSON string in metadata."""
     label = cluster["label"]
     return {
         "id": f"minted-{label}-{index}",
@@ -25,6 +26,7 @@ def build_minted_case(cluster: dict, question: str, gold: str, index: int = 0) -
         "split": "tune",
         "source": "minted",
         "kb": _kb_text(),
+        "guard": json.dumps(guard or {}),
     }
 
 
@@ -41,7 +43,7 @@ def persist_minted_case(case: dict, dataset_name: str | None = None) -> None:
         dataframe=df,
         input_keys=["question"],
         output_keys=["gold_resolution"],
-        metadata_keys=["policy_id", "split", "source", "kb", "id"],
+        metadata_keys=["policy_id", "split", "source", "kb", "id", "guard"],
     )
 
 
