@@ -28,6 +28,11 @@
 | D12 | **Human-approved promotion & mint (Change 3)** | The loop **proposes and proves** (generates a candidate fix, validates it on held-out, presents before/after); the **engineer approves**. Promotion and eval-case minting (D5) happen on approval, never auto-merged. Satisfies the hackathon's "under your oversight" theme. |
 | D13 | **OSS license (Change 5, gate-zero)** | The public repo carries a detectable OSS license (**MIT**). This is a submission disqualifier, not a score deduction. |
 | D14 | **Demo built backward from one beat (Change 6)** | The video lives on one gotcha: the fluent, confident, **wrong** refund answer shown beside the old correct one (the answer a human skimming five outputs would have approved), then the investigator catching exactly that case via Phoenix MCP and naming the cause in plain English. Plan 04's surface is designed to make that 20-second beat land. |
+| D15 | **Agent-authored guards** | Guards are agent-authored, hybrid (`assertion`\|`rubric`), and admitted only via a two-sided discrimination test: the guard must FAIL on the regressed answer and PASS on the gold answer. |
+| D16 | **Guard gate (behavior C)** | Tripping a persisted guard is an instant RED plus investigator narration of which learned guard tripped and its origin run. Independent of flip detection. |
+| D17 | **Frozen cross-family improvement ruler** | Held-out correctness lift (D8) is scored by `IMPROVEMENT_JUDGE_MODEL`, a non-Gemini family distinct from `ENGINEER_MODEL`. The agent cannot grade its own homework. |
+| D18 | **Independent guard review** | Rubric guards are reviewed by `GUARD_REVIEWER_MODEL` (independent family) for specificity, gameability, and over-constraint before admission. |
+| D19 | **Diagnose/fix split** | Diagnosis (+ guard authoring) and fix-authoring are separate agents (Engine's lesson: one agent doing both degrades quality). |
 
 > Decisions are the contract. If execution forces a change, STOP and update this table before deviating (per `executing-plans` deviation protocol).
 >
