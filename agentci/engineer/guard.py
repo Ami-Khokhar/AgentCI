@@ -32,3 +32,15 @@ def run_guard(guard: dict, answer: str) -> dict:
         from agentci.engineer.independent_judge import score_rubric_guard
         return score_rubric_guard(guard, answer)
     raise ValueError(f"unknown guard kind: {guard['kind']!r}")
+
+
+def discrimination_test(guard: dict, bad_answer: str, good_answer: str) -> dict:
+    """A guard earns admission only if it FAILS on the regressed answer AND PASSES on the
+    gold/known-good answer (D15). One-sided guards (loose or over-tight) are rejected."""
+    fails_on_bad = not run_guard(guard, bad_answer)["passed"]
+    passes_on_good = run_guard(guard, good_answer)["passed"]
+    return {
+        "admitted": fails_on_bad and passes_on_good,
+        "fails_on_bad": fails_on_bad,
+        "passes_on_good": passes_on_good,
+    }
