@@ -16,3 +16,12 @@ def test_approve_and_mint_noop_when_absent(monkeypatch):
     monkeypatch.setattr(mint, "_client", lambda: client)
     assert mint.approve_and_mint({"proposed_mint": None}) is None
     assert not client.datasets.add_examples_to_dataset.called
+
+def test_approve_persists_case_with_guard(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(mint, "persist_minted_case", lambda case, ds=None: captured.setdefault("case", case))
+    report = {"gate": "green", "proposed_mint": {"id": "minted-refund-0", "split": "tune",
+              "guard": '{"kind":"assertion","slug":"refund-window"}'}}
+    out = mint.approve_and_mint(report)
+    assert out["id"] == "minted-refund-0"
+    assert "guard" in captured["case"]
