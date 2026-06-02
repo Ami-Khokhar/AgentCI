@@ -13,6 +13,9 @@ def test_benign_candidate_returns_green(monkeypatch):
     monkeypatch.setattr(engineer, "load_persisted_guards", lambda ds: [])
     report = engineer.run_check("BENIGN PROMPT", "benign-1")
     assert report["verdict"] == "green_no_regression"
+    assert report["meta_metrics"]["guards_active"] == 0
+    assert report["meta_metrics"]["guard_tripped"] is None
+    assert report["meta_metrics"]["heldout_lift"] is None
 
 def test_persisted_guard_trip_blocks_immediately(monkeypatch):
     # A persisted guard that the candidate's answer fails -> instant guard_blocked, no investigation.
@@ -29,6 +32,10 @@ def test_persisted_guard_trip_blocks_immediately(monkeypatch):
     assert report["verdict"] == "guard_blocked"
     assert report["guard_gate"]["tripped"] is True
     assert report["guard_gate"]["guard"]["slug"] == "refund-window"
+    assert report["meta_metrics"]["guards_active"] == 1
+    assert report["meta_metrics"]["guard_tripped"] == "refund-window"
+    assert report["meta_metrics"]["heldout_correctness"] is None
+    assert report["meta_metrics"]["heldout_lift"] is None
 
 def test_regression_with_admitted_guard_and_good_fix(monkeypatch):
     def fake_run(prompt, ds, split, name):
@@ -61,3 +68,8 @@ def test_regression_with_admitted_guard_and_good_fix(monkeypatch):
     assert report["verdict"] == "green_promotable_fix"
     assert report["proposed_guard"]["admitted"] is True
     assert report["proposed_mint"]["id"] == "minted-x"
+    assert report["meta_metrics"]["guards_active"] == 0
+    assert report["meta_metrics"]["guard_tripped"] is None
+    assert report["meta_metrics"]["guard_admitted"] is True
+    assert report["meta_metrics"]["heldout_lift"] == report["promotion"]["lift"]
+    assert report["meta_metrics"]["heldout_correctness"] is not None

@@ -99,6 +99,28 @@
 
   .empty{color:var(--muted);font-size:13px;padding:40px 0}
   .divider{height:1px;background:var(--hair);margin:34px 0}
+
+  /* compounding immunity */
+  .immunity{display:flex;align-items:center;gap:18px;border:1px solid var(--hair);border-radius:4px;
+    background:var(--card);padding:18px 20px}
+  .immunity .lvl{font-family:"Instrument Serif",serif;font-size:46px;line-height:1;color:var(--ember)}
+  .immunity .lvl-cap{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .immunity .lvl-d{font-size:12px;color:var(--ink-soft);font-weight:300}
+  .blocked{margin-top:14px;padding:14px 18px;border:1px solid rgba(179,38,30,.45);
+    background:var(--red-soft);border-radius:4px;color:var(--red);font-size:13.5px}
+  .blocked b{font-weight:600}
+  .blocked .small{color:var(--ink-soft);font-size:12px;margin-top:6px;font-weight:300}
+  .passed-note{margin-top:12px;font-size:12px;color:var(--muted);font-style:italic}
+  .guardcard{margin-top:14px;border:1px solid var(--hair);border-radius:4px;background:var(--card);padding:16px 18px}
+  .guardcard .gh{display:flex;gap:10px;align-items:baseline;margin-bottom:8px}
+  .guardcard .kind{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);
+    border:1px solid var(--ember);border-radius:20px;padding:2px 9px}
+  .guardcard .slug{font-weight:600;font-size:13.5px}
+  .guardcard .claim{font-size:13px;color:var(--ink-soft);margin-bottom:12px}
+  .disc{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}
+  .disc .chk{border:1px solid var(--hair);border-radius:3px;padding:5px 10px;background:var(--hair-soft)}
+  .disc .chk.yes{color:var(--green);border-color:rgba(63,125,78,.4);background:var(--green-soft)}
+  .disc .chk.no{color:var(--red);border-color:rgba(179,38,30,.4);background:var(--red-soft)}
   @media(max-width:720px){.beat,.grid2{grid-template-columns:1fr}}
 </style>
 </head>
@@ -134,6 +156,55 @@ async function boot(){
   render(await fetch("/api/report/"+encodeURIComponent(LABEL)).then(r=>r.json()));
 }
 
+function renderImmunity(rep){
+  const meta = rep.meta_metrics || {};
+  const gg = rep.guard_gate || null;
+  const pg = rep.proposed_guard || null;
+  const gr = rep.guard_review || null;
+  // A Plan-05-era report has none of these keys — render nothing.
+  if(!gg && !pg && meta.guards_active==null) return "";
+
+  const active = meta.guards_active!=null ? meta.guards_active : (gg ? (gg.ran||0) : 0);
+  let h = `<section><div class="step-label"><span class="n">∞</span> Compounding immunity</div>
+    <h2>Every caught regression becomes a permanent guard.</h2>
+    <div class="sub">Learned guards run on every future candidate before anything else. The suite can't be fooled by the same regression twice.</div>
+    <div class="immunity">
+      <div><div class="lvl-cap">Immunity level</div><div class="lvl">${esc(active)}</div></div>
+      <div><div class="lvl-d"><b>${esc(active)}</b> learned guard${active===1?"":"s"} now guard${active===1?"s":""} the suite.</div>`;
+  if(meta.heldout_correctness!=null || meta.heldout_lift!=null){
+    h += `<div class="lvl-d" style="margin-top:6px">held-out correctness <b>${meta.heldout_correctness==null?"—":esc(meta.heldout_correctness)}</b>`;
+    if(meta.heldout_lift!=null) h += ` · lift <b>${(meta.heldout_lift>=0?"+":"")+esc(meta.heldout_lift)}</b>`;
+    h += `</div>`;
+  }
+  h += `</div></div>`;
+
+  // Guard gate result — the "can't be fooled twice" beat.
+  if(gg && gg.tripped){
+    const g = gg.guard || {};
+    const origin = (g.origin||{}).label;
+    h += `<div class="blocked"><b>● Blocked by a learned guard.</b> Guard <code>${esc(g.slug)}</code> tripped — this candidate reintroduced a regression the suite already learned to catch.
+      <div class="small">guard origin: ${esc(origin)||"—"}${gg.case_id?` · case ${esc(gg.case_id)}`:""}</div></div>`;
+  } else if(gg){
+    h += `<div class="passed-note">${esc(active)} learned guard${active===1?"":"s"} ran and passed — no known regression reintroduced.</div>`;
+  }
+
+  // Proposed guard + discrimination evidence.
+  if(pg){
+    const yn = v => `<span class="chk ${v?"yes":"no"}">${v?"✓":"✗"}`;
+    h += `<div class="guardcard">
+      <div class="gh"><span class="kind">${esc(pg.kind)||"guard"}</span><span class="slug">${esc(pg.slug)||"—"}</span></div>
+      <div class="claim">${esc(pg.claim)||"—"}</div>
+      <div class="disc">
+        ${yn(pg.fails_on_bad)} fails on bad answer</span>
+        ${yn(pg.passes_on_good)} passes on good answer</span>
+        ${yn(pg.admitted)} ${pg.admitted?"admitted":"not admitted"}</span>`;
+    if(gr && gr.score!=null) h += `<span class="chk">reviewer score ${esc(gr.score)}</span>`;
+    h += `</div></div>`;
+  }
+  h += `</section><div class="divider"></div>`;
+  return h;
+}
+
 function render(rep){
   const gate = rep.gate || "?";
   document.getElementById("gateChip").outerHTML =
@@ -146,6 +217,8 @@ function render(rep){
   const prom = rep.promotion || null;
   const fix = rep.proposed_fix || null;
   let h = "";
+
+  h += renderImmunity(rep);
 
   if(!rep.regression_detected){
     h += `<section><div class="step-label"><span class="n">✓</span> No regression</div>

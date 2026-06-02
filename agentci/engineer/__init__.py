@@ -2,7 +2,7 @@
 from agentci import config
 from agentci.engineer.compare import fetch_baseline_via_mcp, compute_flips, is_regression
 from agentci.engineer.mint import build_minted_case, persist_minted_case
-from agentci.engineer.lift import evaluate_promotion, attach_independent_correctness
+from agentci.engineer.lift import evaluate_promotion, attach_independent_correctness, mean_correctness
 from agentci.engineer.report import assemble_report
 from agentci.evals.experiment import run_candidate
 from agentci.data.dataset import load_tickets
@@ -68,12 +68,17 @@ def run_check(candidate_prompt: str, label: str) -> dict:
     # GUARD GATE (D16): a candidate that trips a previously-minted guard is an instant red.
     guard_gate = _check_persisted_guards(cand_tune)
     if guard_gate.get("tripped"):
+        meta = {"guards_active": guard_gate.get("ran", 0),
+                "guard_tripped": (guard_gate.get("guard") or {}).get("slug"),
+                "guard_admitted": None, "heldout_correctness": None, "heldout_lift": None}
         return assemble_report(label, True, flips, None, None, None, _mcp_call_count(),
-                               guard_gate=guard_gate)
+                               guard_gate=guard_gate, meta_metrics=meta)
 
     if not is_regression(_split(baseline, "tune"), cand_tune):
+        meta = {"guards_active": guard_gate.get("ran", 0), "guard_tripped": None,
+                "guard_admitted": None, "heldout_correctness": None, "heldout_lift": None}
         return assemble_report(label, False, flips, None, None, None, _mcp_call_count(),
-                               guard_gate=guard_gate)
+                               guard_gate=guard_gate, meta_metrics=meta)
 
     # AGENTIC diagnosis (D11/D15/D19): root cause + taxonomy + headline + authored guard.
     diagnosis = diagnose(candidate_prompt, label, flips["pass_to_fail"])
@@ -114,7 +119,12 @@ def run_check(candidate_prompt: str, label: str) -> dict:
         q, gold = _gold_for(cluster)
         proposed_mint = build_minted_case(cluster, q, gold, guard=guard)
 
+    meta = {"guards_active": guard_gate.get("ran", 0), "guard_tripped": None,
+            "guard_admitted": proposed_guard.get("admitted") if proposed_guard else None,
+            "heldout_correctness": mean_correctness(fixed_heldout),
+            "heldout_lift": promotion["lift"] if promotion else None}
+
     return assemble_report(label, True, flips, cluster, fix, promotion, _mcp_call_count(),
                            investigation=diagnosis, proposed_mint=proposed_mint,
                            guard_gate=guard_gate, proposed_guard=proposed_guard,
-                           guard_review=guard_review)
+                           guard_review=guard_review, meta_metrics=meta)
