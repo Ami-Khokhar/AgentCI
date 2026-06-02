@@ -44,3 +44,29 @@ def discrimination_test(guard: dict, bad_answer: str, good_answer: str) -> dict:
         "fails_on_bad": fails_on_bad,
         "passes_on_good": passes_on_good,
     }
+
+
+import json as _json
+
+
+def _get_dataset(dataset_name: str):
+    from phoenix.client import Client
+    return Client().datasets.get_dataset(dataset=dataset_name)
+
+
+def load_persisted_guards(dataset_name: str) -> list[dict]:
+    """Load guard specs from minted examples in the Phoenix dataset (D16). Each minted example
+    carries its guard JSON in metadata['guard']."""
+    ds = _get_dataset(dataset_name)
+    guards = []
+    for ex in ds.examples:
+        md = ex.get("metadata", {})
+        if md.get("source") != "minted":
+            continue
+        raw = md.get("guard")
+        if not raw:
+            continue
+        guard = _json.loads(raw)
+        if guard.get("kind"):
+            guards.append(guard)
+    return guards

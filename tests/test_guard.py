@@ -44,3 +44,17 @@ def test_discrimination_rejects_guard_that_fails_good_answer():
     g = _assertion({"type": "must_include", "values": ["unicorn"], "mode": "all"})
     res = discrimination_test(g, bad_answer="bad", good_answer="14-day refund window.")
     assert res["admitted"] is False and res["passes_on_good"] is False
+
+
+def test_load_persisted_guards_parses_minted_examples(monkeypatch):
+    import agentci.engineer.guard as guardmod
+    class FakeDS:
+        examples = [
+            {"id": "e1", "metadata": {"source": "minted",
+                "guard": '{"kind":"assertion","slug":"refund-window","check":{"type":"must_include","values":["14-day"],"mode":"all"},"origin":{}}'}},
+            {"id": "e2", "metadata": {"source": "seed"}},  # not a guard
+        ]
+    monkeypatch.setattr(guardmod, "_get_dataset", lambda name: FakeDS())
+    guards = guardmod.load_persisted_guards("ds")
+    assert len(guards) == 1
+    assert guards[0]["slug"] == "refund-window"
