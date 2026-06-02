@@ -37,3 +37,22 @@ def test_report_carries_investigation_and_proposed_mint():
     assert r["investigation"]["hypothesis"] == "h"
     assert r["proposed_mint"]["id"] == "minted-x"
     assert r["verdict"] == "green_promotable_fix"
+
+def test_guard_blocked_verdict_and_keys():
+    from agentci.engineer.report import assemble_report
+    guard_gate = {"tripped": True, "guard": {"slug": "refund-window", "origin": {"label": "refund-policy"}},
+                  "ran": 3}
+    rep = assemble_report("reg-refund", regression=True, flips={"pass_to_fail": [], "fail_to_pass": []},
+                          cluster=None, fix=None, promotion=None, mcp_calls=2,
+                          guard_gate=guard_gate)
+    assert rep["verdict"] == "guard_blocked"
+    assert rep["gate"] == "red"
+    assert rep["guard_gate"]["tripped"] is True
+
+def test_proposed_guard_and_review_keys_present_by_default():
+    from agentci.engineer.report import assemble_report
+    rep = assemble_report("benign", regression=False, flips={"pass_to_fail": [], "fail_to_pass": []},
+                          cluster=None, fix=None, promotion=None, mcp_calls=1)
+    assert rep["proposed_guard"] is None
+    assert rep["guard_review"] is None
+    assert rep["guard_gate"] is None
