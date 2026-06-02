@@ -357,7 +357,70 @@
     <ul><li><code>uv run pytest -q</code> → <strong>61 passed</strong>. Added a <code>README.md</code>. Live trajectory recording (data gen, baseline experiments, real MCP investigation) remains the credential-gated one-time <code>record</code> run.</li></ul>
   </div>
 
+  <!-- =================== ENTRY =================== -->
+  <div class="entry">
+    <h2>architecture.html — event-timeline section <span class="badge b-done">DONE</span></h2>
+    <div class="ts">docs · interactive run replay</div>
+    <h3>What was added</h3>
+    <ul>
+      <li>A new <strong>“Watch the agent work a regression”</strong> section below the interactive diagram: a vertical event timeline that visualises one full check run (the <code>reg_refund</code> demo case) as 18 discrete events grouped into six phases — baseline read → evaluate → detect → investigate → prove → decide.</li>
+      <li><strong>Faithful to the code, not invented:</strong> the sequence mirrors <code>run_check()</code> + the D11 investigator exactly — 2 baseline MCP reads, candidate over the 24-tune split, 4-judge scoring, 3 pass→fail flips ⇒ RED, the agent's hypothesis → 3 agent-chosen MCP queries → verify → root-cause → headline example → proposed fix, held-out proof (lift +0.14, 0 flips ⇒ PROMOTABLE), proposed-but-unminted guard case (D12), and the human approve→mint that closes the loop. Total <strong>5 load-bearing MCP reads</strong> = the count the report carries (GAP-4).</li>
+      <li><strong>Interactive replay:</strong> a <em>Replay run</em> button steps through the events with staggered reveal, ticking a live MCP-read counter and flipping the flips/verdict stat chips as the gate goes RED then GREEN; MCP events glow ember. <em>show all</em> reveals the whole trajectory at once (the default state).</li>
+      <li><strong>Honest framing:</strong> a footnote states the ticket ids, timings and query count are illustrative while the <em>sequence</em> is exact — there is no committed live run (live recording stays the credential-gated <code>record</code> one-shot).</li>
+    </ul>
+    <h3>How it was built</h3>
+    <div class="reason">Kept entirely within the existing engineering-schematic aesthetic (Instrument Serif + JetBrains Mono, paper/ember, dashed = external) and the file's data-driven pattern — events live in a <code>RUN</code> array rendered by JS, reusing the existing <code>esc()</code> escaper. Added a deeper red / green to the palette only for the gate flag chips. JS verified with <code>node --check</code> (no browser available in-session).</div>
+  </div>
+
   <!-- NEW-ENTRY-ANCHOR -->
+
+  <!-- =================== ENTRY =================== -->
+  <div class="entry">
+    <h2>Plan 06 — Compounding Regression Immunity <span class="badge b-done">DONE</span></h2>
+    <div class="ts">sprint · D15–D19 · 3 implementer subagents + controller, opus review</div>
+    <h3>What it is</h3>
+    <p>A closed self-improving loop on top of the existing regression CI. When the gate goes red, an agent authors a "guard" — a targeted regression test — that, once human-approved, becomes a permanent member of the eval suite so the same regression can never silently pass twice.</p>
+    <h3>Decisions locked (D15–D19)</h3>
+    <ul>
+      <li><strong>D15 — Agent-authored hybrid guards:</strong> deterministic <code>assertion</code> and/or scoped LLM-judge <code>rubric</code>, admitted only via a two-sided discrimination test (must FAIL on the regressed answer, PASS on the gold/known-good answer).</li>
+      <li><strong>D16 — Guard gate (behavior C):</strong> tripping a persisted guard is an instant RED (<code>verdict="guard_blocked"</code>) with the investigator naming which learned guard tripped.</li>
+      <li><strong>D17 — Frozen cross-family improvement ruler:</strong> held-out lift AND the pass→fail regression leg are scored by a non-Gemini judge (<code>claude-haiku-4-5</code>), so the Gemini optimizer cannot grade its own homework.</li>
+      <li><strong>D18 — Independent rubric review:</strong> adversarial review of candidate guards by the cross-family model.</li>
+      <li><strong>D19 — Diagnose/fix split:</strong> diagnosis (+ guard authoring) and fix-authoring are separate agents — a lesson borrowed from LangChain's LangSmith Engine.</li>
+    </ul>
+    <h3>Design rationale</h3>
+    <div class="reason">
+      This plan answers an architectural question revealed in post-Plan-05 reflection: if we're treating Agent CI as a closed-loop optimizer (D11/D12), how do we prevent the optimizer from gaming its own evaluators, and how do we build permanent institutional memory against repeated regressions? The discrimination-test framing and two-sided guard validation are stronger than LangSmith Engine's one-sided evaluator check; the cross-family judge (D17) prevents self-grading; and the diagnose/fix split (D19) enforces specialization so root-cause reasoning doesn't contaminate fix engineering. The designs were validated against Engine's published architecture.
+    </div>
+    <h3>What was built</h3>
+    <ul>
+      <li><strong>agentci/engineer/guard.py</strong> — guard runner, discrimination test, and persisted-guard loader. Guards are stored as <code>Guard</code> dataclass (id, author-date, guard-case-id, trigger-phrase, assertion/rubric pair).</li>
+      <li><strong>agentci/engineer/independent_judge.py</strong> — cross-family judge using <code>claude-haiku-4-5</code> for lift scoring and regression-leg scoring (D17).</li>
+      <li><strong>agentci/engineer/review.py</strong> — adversarial rubric reviewer (D18). Evaluates: does the guard trigger on the regressed answer? Does it pass on the gold? Is it overfit (does it reject unrelated answers)?</li>
+      <li><strong>agentci/engineer/diagnose.py + fix_author.py</strong> — split agent tasks replacing old <code>investigate.py</code> (kept but unused by <code>run_check</code>). <code>diagnose.py</code> drives the agent through root-cause reasoning + guard authoring; <code>fix_author.py</code> proposes the fix separate from diagnosis (D19).</li>
+      <li><strong>Modified:</strong> <code>config.py</code> (added haiku model + guard config), <code>lift.py</code> (replaced in-family judge with independent judge, D17), <code>mint.py</code> (persist guards on human approve), <code>report.py</code> (surface guard info, "guard_blocked" verdict), <code>engineer/__init__.py</code> (new run_check orchestration with guard gate check + diagnose/fix separation).</li>
+    </ul>
+    <h3>Implementation notes</h3>
+    <ul>
+      <li><strong>Test-driven development:</strong> built with strict TDD; 82 offline tests pass, all using cached replay fixtures.</li>
+      <li><strong>First-implementer subagent stumble:</strong> two early implementer subagents committed directly to <code>main</code> instead of the worktree branch (their cwd was pinned to the repo root). Recovered by cherry-picking their commits onto the branch and resetting <code>main</code>, then executed the rest directly in the worktree. This taught a lesson about cwd pinning in subagent contexts.</li>
+      <li><strong>Final opus review (APPROVED_WITH_MINOR_NITS):</strong> caught one real gap — the held-out pass→fail regression leg still used the in-family <code>passed` flag instead of independent scoring. Fixed so D17 governs both the lift average and the regression check.</li>
+    </ul>
+    <h3>Result</h3>
+    <ul><li><code>uv run pytest -q</code> → <strong>82 passed</strong>. Merged to <code>main</code> with <code>--no-ff</code> as commit <code>f97e00d</code>.</li></ul>
+  </div>
+
+  <!-- =================== ENTRY =================== -->
+  <div class="entry">
+    <h2>Plan 06 status <span class="badge b-done">COMPLETE (offline)</span></h2>
+    <div class="ts">summary</div>
+    <ul>
+      <li>Full Plan 06 implemented; <strong>82 pytest tests green</strong>; five new modules (guard, independent_judge, review, diagnose, fix_author) plus modifications to config/lift/mint/report/engineer core.</li>
+      <li>Discrimination-test guard validation, cross-family scoring (D17), adversarial review (D18), and diagnose/fix split (D19) all in place. The closed self-improving loop is complete offline.</li>
+      <li><strong>Credential-gated steps remain:</strong> live recording of new cache namespaces (diagnose-agent, fix-author, review, independent-judge). Commands are in the plan; offline tests cover everything else.</li>
+      <li><strong>Next:</strong> Plan 07 (dashboard meta-metrics + optional cheap-screener) — final doc / dashboard surface polish.</li>
+    </ul>
+  </div>
 
 </main>
 </body>
