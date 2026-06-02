@@ -17,6 +17,9 @@ from still-passing ones, and refine.
 
 Classify the root cause into EXACTLY ONE category from: {taxonomy}.
 
+CANDIDATE SYSTEM PROMPT (the edit under test — inspect it for what changed):
+{candidate_prompt}
+
 Then AUTHOR A GUARD — a regression test that asserts the specific property a correct answer must
 satisfy. Prefer a deterministic 'assertion' when the property is crisp (a required phrase, a cited
 policy id, a number); use a scoped 'rubric' (a one-line PASS/FAIL LLM-judge prompt) when the
@@ -49,6 +52,7 @@ async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[s
     goal = _DIAGNOSIS_GOAL.format(
         label=label, pass_to_fail=pass_to_fail,
         taxonomy=", ".join(config.FAILURE_TAXONOMY),
+        candidate_prompt=candidate_prompt,
     )
     final, mcp_calls = "", 0
     async for event in runner.run_async(

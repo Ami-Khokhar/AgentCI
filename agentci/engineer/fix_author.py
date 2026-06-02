@@ -28,9 +28,9 @@ def _parse_json(raw: str) -> dict:
 async def _run_fix(candidate_prompt: str, root_cause: dict) -> str:
     from google.adk.runners import InMemoryRunner
     from google.genai import types
-    from agentci.engineer.agent import build_engineer_agent
+    from agentci.engineer.agent import build_fix_agent
 
-    runner = InMemoryRunner(agent=build_engineer_agent(), app_name="agentci-fix")
+    runner = InMemoryRunner(agent=build_fix_agent(), app_name="agentci-fix")
     uid, sid = "agentci", uuid.uuid4().hex
     await runner.session_service.create_session(app_name="agentci-fix", user_id=uid, session_id=sid)
     goal = _FIX_GOAL.format(candidate_prompt=candidate_prompt, root_cause=json.dumps(root_cause))
