@@ -27,3 +27,16 @@ def test_not_promotable_when_lift_too_small():
     fixed = [_r("h0", True, 0.82)]   # +0.02 < 0.05
     out = evaluate_promotion(base, fixed)
     assert out["promotable"] is False
+
+
+from agentci.engineer.lift import attach_independent_correctness
+
+def test_attach_independent_correctness_overwrites_with_ruler(monkeypatch):
+    import agentci.engineer.lift as lift
+    monkeypatch.setattr(lift, "judge_correctness", lambda answer, gold: 0.95)
+    rows = [{"id": "h0", "split": "held_out", "answer": "A",
+             "scores": {"correctness": 0.40}, "passed": False}]
+    gold_by_id = {"h0": "G"}
+    out = attach_independent_correctness(rows, gold_by_id)
+    # independent ruler replaces the in-family correctness used for lift
+    assert out[0]["scores"]["correctness"] == 0.95
