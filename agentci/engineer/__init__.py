@@ -1,12 +1,15 @@
-"""Engineer package: orchestrates one AgentCI check run."""
+"""Engineer package: orchestrates one AgentCI check run (closed self-improving loop)."""
 from agentci import config
 from agentci.engineer.compare import fetch_baseline_via_mcp, compute_flips, is_regression
 from agentci.engineer.mint import build_minted_case, persist_minted_case
-from agentci.engineer.lift import evaluate_promotion
+from agentci.engineer.lift import evaluate_promotion, attach_independent_correctness
 from agentci.engineer.report import assemble_report
 from agentci.evals.experiment import run_candidate
 from agentci.data.dataset import load_tickets
-from agentci.engineer.investigate import investigate
+from agentci.engineer.diagnose import diagnose
+from agentci.engineer.fix_author import author_fix
+from agentci.engineer.guard import run_guard, discrimination_test, load_persisted_guards
+from agentci.engineer.review import review_rubric, passes_review
 
 _MCP_CALLS = {"n": 0}
 
@@ -19,27 +22,40 @@ def _split(rows, split):
     return [r for r in rows if r["split"] == split]
 
 
+def _ticket_index():
+    return {t["id"]: t for t in load_tickets()}
+
+
 def _gold_for(cluster) -> tuple[str, str]:
     """Pick a representative question + gold from the cluster's first case id."""
-    by_id = {t["id"]: t for t in load_tickets()}
+    by_id = _ticket_index()
     cid = (cluster.get("case_ids") or [None])[0]
     t = by_id.get(cid, {})
     return (t.get("question", f"Question about {cluster['label']}"),
             t.get("gold_resolution", cluster.get("summary", "")))
 
 
-def run_check(candidate_prompt: str, label: str) -> dict:
-    """Run one AgentCI check (D11/D12).
+def _check_persisted_guards(cand_rows: list[dict]) -> dict:
+    """Run every persisted guard against the candidate's answers. Return the first trip (D16)."""
+    guards = load_persisted_guards(config.DATASET_NAME)
+    answer_by_id = {r["id"]: r.get("answer", "") for r in cand_rows}
+    for guard in guards:
+        for cid in (guard.get("origin", {}).get("case_ids") or list(answer_by_id.keys())):
+            if cid not in answer_by_id:
+                continue
+            if not run_guard(guard, answer_by_id[cid])["passed"]:
+                return {"tripped": True, "guard": guard, "case_id": cid, "ran": len(guards)}
+    return {"tripped": False, "guard": None, "ran": len(guards)}
 
-    Deterministic CI detects the regression; the AGENTIC investigator root-causes it and
-    proposes a fix; the fix is validated on held-out; the report carries the proposed mint
-    but does NOT persist it (minting happens on human approval, D12).
+
+def run_check(candidate_prompt: str, label: str) -> dict:
+    """Run one AgentCI check: guard gate (D16) -> flip detection -> agentic diagnose (D11) +
+    separate fix-author (D19) -> guard discrimination (D15) + review (D18) -> held-out lift on the
+    cross-family ruler (D17). Proposes a fix + guard; persists nothing (human-approved, D12).
 
     Precondition: the baseline experiments ``baseline-tune`` and ``baseline-heldout`` must
-    already exist in Phoenix (produced by running ``BASELINE_SUPPORT_PROMPT`` over each split)
-    and are read back at runtime THROUGH Phoenix MCP (GAP-4) — never from a local copy.
+    already exist in Phoenix and are read back THROUGH Phoenix MCP (GAP-4).
     """
-    # Count MCP-mediated reads so the report can evidence load-bearing MCP (GAP-4).
     _MCP_CALLS["n"] = 0
     baseline = fetch_baseline_via_mcp("baseline-tune")
     _MCP_CALLS["n"] += 1
@@ -49,23 +65,56 @@ def run_check(candidate_prompt: str, label: str) -> dict:
     cand_tune = run_candidate(candidate_prompt, config.DATASET_NAME, "tune", f"cand-{label}-tune")
     flips = compute_flips(_split(baseline, "tune"), cand_tune)
 
+    # GUARD GATE (D16): a candidate that trips a previously-minted guard is an instant red.
+    guard_gate = _check_persisted_guards(cand_tune)
+    if guard_gate.get("tripped"):
+        return assemble_report(label, True, flips, None, None, None, _mcp_call_count(),
+                               guard_gate=guard_gate)
+
     if not is_regression(_split(baseline, "tune"), cand_tune):
-        return assemble_report(label, False, flips, None, None, None, _mcp_call_count())
+        return assemble_report(label, False, flips, None, None, None, _mcp_call_count(),
+                               guard_gate=guard_gate)
 
-    # AGENTIC investigation (D11): hypothesis -> agent-chosen Phoenix MCP queries -> root cause + fix.
-    investigation = investigate(candidate_prompt, label, flips["pass_to_fail"])
-    _MCP_CALLS["n"] += int(investigation.get("mcp_calls", 0))
-    cluster = investigation["root_cause"]
-    fix = investigation["proposed_fix"]
+    # AGENTIC diagnosis (D11/D15/D19): root cause + taxonomy + headline + authored guard.
+    diagnosis = diagnose(candidate_prompt, label, flips["pass_to_fail"])
+    _MCP_CALLS["n"] += int(diagnosis.get("mcp_calls", 0))
+    cluster = diagnosis["root_cause"]
+    guard = diagnosis["guard"]
+    headline = diagnosis.get("headline_example", {})
 
+    # Separate fix-author agent (D19).
+    fix = author_fix(candidate_prompt, cluster)
+
+    # Guard admission (D15): two-sided discrimination using the headline's wrong vs correct answers.
+    disc = discrimination_test(guard, bad_answer=headline.get("candidate_answer", ""),
+                               good_answer=headline.get("baseline_answer", ""))
+    proposed_guard = {**guard, **disc}
+
+    # Adversarial review for rubric guards (D18).
+    guard_review = None
+    if guard.get("kind") == "rubric":
+        guard_review = review_rubric(guard)
+
+    admitted = disc["admitted"] and (guard_review is None or passes_review(guard_review))
+
+    # Validate the fix on held-out, scored by the independent-family ruler (D17).
     fixed_heldout = run_candidate(fix["revised_prompt"], config.DATASET_NAME, "held_out", f"fixed-{label}-heldout")
-    promotion = evaluate_promotion(_split(baseline, "held_out"), fixed_heldout)
+    by_id = _ticket_index()
+    fixed_heldout = attach_independent_correctness(
+        fixed_heldout,
+        {r["id"]: by_id.get(r["id"], {}).get("gold_resolution", "") for r in fixed_heldout})
+    baseline_heldout = attach_independent_correctness(
+        _split(baseline, "held_out"),
+        {r["id"]: by_id.get(r["id"], {}).get("gold_resolution", "") for r in _split(baseline, "held_out")})
+    promotion = evaluate_promotion(baseline_heldout, fixed_heldout)
 
-    # D12: build the minted case as a PROPOSAL; it is persisted only on human approval.
+    # Propose the minted case + guard only if promotable AND the guard earned admission (D12/D15).
     proposed_mint = None
-    if promotion["promotable"]:
+    if promotion["promotable"] and admitted:
         q, gold = _gold_for(cluster)
-        proposed_mint = build_minted_case(cluster, q, gold)
+        proposed_mint = build_minted_case(cluster, q, gold, guard=guard)
 
     return assemble_report(label, True, flips, cluster, fix, promotion, _mcp_call_count(),
-                           investigation=investigation, proposed_mint=proposed_mint)
+                           investigation=diagnosis, proposed_mint=proposed_mint,
+                           guard_gate=guard_gate, proposed_guard=proposed_guard,
+                           guard_review=guard_review)
