@@ -13,3 +13,16 @@ def test_models_are_pinned_and_deterministic():
 
 def test_baseline_prompt_is_registered():
     assert "refund" in config.BASELINE_SUPPORT_PROMPT.lower()
+
+def test_improvement_judge_is_independent_family():
+    from agentci import config
+    # D17: the improvement ruler must NOT share a family with the optimizer.
+    assert config.IMPROVEMENT_JUDGE_MODEL != config.ENGINEER_MODEL
+    assert not config.IMPROVEMENT_JUDGE_MODEL.startswith("gemini")
+    assert not config.GUARD_REVIEWER_MODEL.startswith("gemini")
+
+def test_failure_taxonomy_is_fixed_set():
+    from agentci import config
+    assert "factual_omission" in config.FAILURE_TAXONOMY
+    assert "over_refusal" in config.FAILURE_TAXONOMY
+    assert len(config.FAILURE_TAXONOMY) == 5
