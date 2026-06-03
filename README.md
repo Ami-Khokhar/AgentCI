@@ -19,25 +19,33 @@ outputs would approve it.
 **AgentCI is regression CI for that.** On a candidate prompt change it detects regressions, and when
 the gate goes red a Gemini agent **autonomously investigates why** — forming a hypothesis, querying
 the relevant experiments and traces through the **Phoenix MCP server**, naming the root cause in
-plain English, proposing a fix, and proving it on held-out data. A human approves; the fix is
-promoted and a permanent eval case is minted so that exact regression can never silently return.
+plain English, and **authoring a targeted guard** (a deterministic assertion and/or scoped
+LLM-judge rubric) that catches that exact failure. A separate agent proposes the prompt fix; the fix
+must prove held-out lift on a **frozen cross-family ruler**. A human approves; the fix is promoted
+and the guard joins the permanent suite — so that exact regression can **never silently return**.
+This is the compounding part: every regression caught makes the suite permanently stronger.
 
 ## How it works
 
 ```
 candidate.txt ─► agentci check ─► run_check(prompt, label)
-   (deterministic CI)  ├─ run candidate over the eval set  →  Phoenix experiment
+   (deterministic CI)  ├─ GUARD GATE (D16): run every previously-minted guard; a trip = instant RED
+                       ├─ run candidate over the eval set  →  Phoenix experiment
                        ├─ detect pass→fail flips vs baseline (D10)   ── red / green gate
                        │
-   (AGENTIC, D11)      ├─ if red: investigate() — a Gemini reason-act loop that chooses which
-                       │          Phoenix MCP queries to run, root-causes the cluster, and
-                       │          proposes a fix (tool calls are NOT pre-scripted)
+   (AGENTIC, D11/D19)  ├─ if red: diagnose() — a Gemini reason-act loop that chooses which Phoenix
+                       │          MCP queries to run, root-causes the cluster, classifies the failure
+                       │          taxonomy, and AUTHORS a guard (tool calls are NOT pre-scripted)
+                       ├─          author_fix() — a SEPARATE agent writes the proposed prompt fix
                        │
-   (deterministic)     ├─ validate the proposed fix on the HELD-OUT split → lift + gate (D8)
-                       └─ assemble report (proposes a minted eval case — does not auto-commit it)
+   (deterministic)     ├─ admit the guard via a two-sided discrimination test (D15: must FAIL the
+                       │          regressed answer, PASS the gold) + adversarial review for rubrics (D18)
+                       ├─ validate the fix on the HELD-OUT split, scored by the cross-family ruler →
+                       │          lift + promotion gate (D8/D17)
+                       └─ assemble report (proposes a minted case + guard — does not auto-commit them)
                                 │
    surface ──► CLI summary + runs/<label>.json + dashboard
-                                └─ human Approve ─► mint permanent guard case (tune partition, D12)
+                                └─ human Approve ─► mint permanent case + guard (tune partition, D12)
 ```
 
 - **Target agent** (`agentci/target`) — a config-driven Google ADK support agent (`gemini-2.5-flash`).
@@ -46,12 +54,20 @@ candidate.txt ─► agentci check ─► run_check(prompt, label)
   24/16 tune/held-out split, scored by **four LLM-as-judge** dimensions (correctness, groundedness,
   completeness, policy-reference) via Phoenix experiments.
 - **Regression Investigator** (`agentci/engineer`) — an ADK `LlmAgent` with `@arizeai/phoenix-mcp`
-  mounted as an `McpToolset`; the deterministic CI scaffolding (flip detection, held-out lift,
-  promotion gate, confusion matrix) wraps the agentic investigation.
+  mounted as an `McpToolset`, split into a **diagnose** agent (root cause + guard authoring) and a
+  separate **fix-author** agent (D19). The deterministic CI scaffolding (flip detection, the guard
+  gate, guard discrimination/review, held-out lift, promotion gate, confusion matrix) wraps the
+  agentic steps. The held-out improvement ruler and the guard reviewer run on a **non-Gemini family**
+  (`claude-haiku-4-5`) so the agent can't grade its own homework (D17/D18).
 - **Surface** (`agentci/cli.py`, `agentci/server`) — `agentci check` + a single-page dashboard built
-  around one demo beat: the fluent-wrong answer beside the correct one, then the agent catching it.
+  around one demo beat: the fluent-wrong answer beside the correct one, the agent catching it, and
+  the learned guard that blocks it forever after.
 
 Instrumentation is OpenInference → **Phoenix Cloud** (`phoenix.otel.register(auto_instrument=True)`).
+
+The run report's `verdict` is one of `green_no_regression`, `green_promotable_fix`, `red_no_fix`, or
+`guard_blocked` (a candidate tripping a previously-learned guard — caught instantly, no investigation
+needed).
 
 ## Quickstart
 
@@ -60,7 +76,7 @@ Phoenix MCP server).
 
 ```bash
 uv sync --extra dev          # install
-uv run pytest -q             # 61 deterministic tests (no API keys needed)
+uv run pytest -q             # 82 deterministic tests (no API keys needed)
 ```
 
 The full suite runs offline: every LLM / judge / MCP / agent call goes through a **record/replay
@@ -69,7 +85,7 @@ cache**, so tests and the demo are deterministic.
 ### Running live (needs credentials)
 
 ```bash
-cp .env.example .env         # fill in PHOENIX_* and GOOGLE_API_KEY
+cp .env.example .env         # fill in PHOENIX_*, GOOGLE_API_KEY, and ANTHROPIC_API_KEY
 # 1. build the dataset + baseline experiments (one-shot, recorded)
 uv run python -m agentci.data.generate
 uv run python -c "from agentci.tracing import init_tracing; from agentci.evals.experiment import run_candidate; from agentci import config; import os; os.environ['AGENTCI_CACHE_MODE']='record'; init_tracing(); run_candidate(config.BASELINE_SUPPORT_PROMPT, config.DATASET_NAME, 'tune', 'baseline-tune'); run_candidate(config.BASELINE_SUPPORT_PROMPT, config.DATASET_NAME, 'held_out', 'baseline-heldout')"
@@ -89,19 +105,24 @@ improving edit is ever flagged).
 
 ## Design decisions
 
-The full frozen-decisions contract (D1–D14) lives in
+The full frozen-decisions contract (D1–D19) lives in
 [`docs/superpowers/plans/2026-06-01-agentci-00-overview.md`](docs/superpowers/plans/2026-06-01-agentci-00-overview.md).
 Headlines: pinned models + temperature 0 for determinism (D7); a fix is promotable only on
 **held-out** lift ≥ 0.05 with zero held-out regressions (D8); promotion & minting are
 **human-approved** (D12); the investigation is a **genuine agentic reason-act loop** over MCP (D11).
+The compounding-immunity decisions: guards are **agent-authored** and admitted only via a two-sided
+discrimination test (D15); tripping a persisted guard is an **instant red** (D16); the held-out
+improvement ruler and the rubric reviewer run on an **independent model family** so the agent can't
+grade its own work (D17/D18); diagnosis and fix-authoring are **separate agents** (D19).
 
 A visual walkthrough of the runtime + eval harness is in [`architecture.html`](architecture.html),
 and a full action-by-action build journal is in [`agentci-build-log.html`](agentci-build-log.html).
 
 ## Status
 
-Plans 01–03 + the agentic-investigator/surface sprint (Plan 05) are implemented and merged, with
-**61 passing offline tests**. The credential-gated live steps — generating data, recording the
+Plans 01–03, the agentic-investigator/surface sprint (Plan 05), the compounding-immunity engine
+(Plan 06, D15–D19) and its dashboard surfacing (Plan 07) are implemented and merged, with
+**82 passing offline tests**. The credential-gated live steps — generating data, recording the
 baseline experiments, and capturing the investigator's real MCP trajectory — are the documented
 one-time `record`-mode runs above; everything else is covered deterministically.
 
