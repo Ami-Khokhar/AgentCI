@@ -40,3 +40,31 @@ def check(candidate, label, runs_dir):
     click.echo(f"mcp calls : {report['mcp_calls']}")
     click.echo(f"report    : {report_path}")
     click.echo(f"dashboard : http://127.0.0.1:8000/?run={label}")
+
+
+@cli.command()
+@click.option("--run", "run_path", required=True, type=click.Path(exists=True, dir_okay=False),
+              help="Path to a run report JSON to approve.")
+def approve(run_path):
+    """Approve a green_promotable_fix run: promote the fix, mint the case, write Quality Memory (D12)."""
+    from datetime import datetime, timezone
+
+    from agentci.engineer.mint import approve_and_mint
+    from agentci.memory import memory
+
+    path = Path(run_path)
+    report = json.loads(path.read_text(encoding="utf-8"))
+    if report.get("gate") != "green" or not report.get("proposed_mint"):
+        raise click.ClickException("nothing to approve (gate not green / no proposed mint)")
+    if report.get("minted"):
+        raise click.ClickException("already approved — nothing to do")
+
+    minted = approve_and_mint(report)
+    entry = memory.record_approval(report, datetime.now(timezone.utc).isoformat())
+    report["minted"] = minted
+    report["memory_entry"] = entry
+    path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    click.echo(f"approved : {report.get('candidate_label')}")
+    click.echo(f"minted   : {minted['id'] if minted else '—'}")
+    click.echo(f"memory   : {entry['failure_type']} — {entry['lesson']}")
