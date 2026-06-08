@@ -56,6 +56,8 @@ def approve(run_path):
     report = json.loads(path.read_text(encoding="utf-8"))
     if report.get("gate") != "green" or not report.get("proposed_mint"):
         raise click.ClickException("nothing to approve (gate not green / no proposed mint)")
+    if report.get("minted"):
+        raise click.ClickException("already approved — nothing to do")
 
     minted = approve_and_mint(report)
     entry = memory.record_approval(report, datetime.now(timezone.utc).isoformat())

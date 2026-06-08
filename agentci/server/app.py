@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
         report = _load_report(label)
         if report.get("gate") != "green" or not report.get("proposed_mint"):
             raise HTTPException(status_code=409, detail="nothing to approve (gate not green / no proposed mint)")
+        if report.get("minted"):
+            raise HTTPException(status_code=409, detail="already approved — nothing to do")
         minted = approve_and_mint(report)
         entry = memory.record_approval(report, datetime.now(timezone.utc).isoformat())
         report["minted"] = minted

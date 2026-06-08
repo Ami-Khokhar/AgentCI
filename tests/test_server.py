@@ -29,7 +29,7 @@ def test_approve_green_calls_mint(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
     _seed(tmp_path, "reg", {"gate": "green", "proposed_mint": {"id": "m"}})
-    monkeypatch.setattr(appmod, "approve_and_mint", lambda report: {"id": "m"})
+    monkeypatch.setattr(appmod, "approve_and_mint", lambda report, dataset_name=None: {"id": "m"})
     c = TestClient(appmod.create_app())
     r = c.post("/api/approve/reg")
     assert r.status_code == 200 and r.json()["approved"] is True and r.json()["minted"] == {"id": "m"}
@@ -51,7 +51,7 @@ def test_approve_writes_memory_entry(monkeypatch, tmp_path):
               "proposed_fix": {"rationale": "always cite refund policy"},
               "proposed_mint": {"id": "minted-refund-policy-0", "guard": '{"slug": "refund-window"}'}}
     _seed(tmp_path, "reg-concise", report)
-    monkeypatch.setattr(appmod, "approve_and_mint", lambda report: report["proposed_mint"])
+    monkeypatch.setattr(appmod, "approve_and_mint", lambda report, dataset_name=None: report["proposed_mint"])
     c = TestClient(appmod.create_app())
     r = c.post("/api/approve/reg-concise")
     assert r.status_code == 200
@@ -60,6 +60,14 @@ def test_approve_writes_memory_entry(monkeypatch, tmp_path):
     assert persisted["memory_entry"]["failure_type"] == "factual_omission"
     from agentci.memory import memory
     assert len(memory.load_memory()) == 1
+
+
+def test_approve_already_approved_is_409(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
+    _seed(tmp_path, "reg", {"gate": "green", "proposed_mint": {"id": "m"}, "minted": {"id": "m"}})
+    c = TestClient(appmod.create_app())
+    assert c.post("/api/approve/reg").status_code == 409
 
 
 def test_get_memory_endpoint_newest_first(monkeypatch, tmp_path):

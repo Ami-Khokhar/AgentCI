@@ -37,3 +37,15 @@ def test_approve_command_rejects_non_green(tmp_path):
     result = CliRunner().invoke(cli, ["approve", "--run", str(run_path)])
     assert result.exit_code != 0
     assert "nothing to approve" in result.output
+
+
+def test_approve_command_rejects_already_approved(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
+    report = {"candidate_label": "reg", "gate": "green",
+              "proposed_mint": {"id": "m", "guard": "{}"}, "minted": {"id": "m"}}
+    run_path = tmp_path / "reg.json"
+    run_path.write_text(json.dumps(report))
+    result = CliRunner().invoke(cli, ["approve", "--run", str(run_path)])
+    assert result.exit_code != 0
+    assert "already approved" in result.output
