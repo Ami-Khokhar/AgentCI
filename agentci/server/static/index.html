@@ -63,6 +63,10 @@
 
   /* catch / investigation */
   .panel{border:1px solid var(--hair);border-radius:4px;background:var(--card);padding:18px 20px}
+  .priorknow{margin-top:10px;padding:8px 10px;border-left:3px solid var(--ok,#2e7d32);background:rgba(46,125,50,.08);font-size:13px}
+  .qm-row{border:1px solid var(--hair);border-radius:4px;padding:10px 12px;margin-top:8px}
+  .qm-row .qm-h{font-size:12px;color:var(--muted);display:flex;gap:10px;justify-content:space-between}
+  .qm-row .qm-lesson{margin-top:4px}
   .hyp{font-size:14px;margin-bottom:14px}
   .hyp .lead{color:var(--ember);font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:5px}
   .steps{list-style:none;counter-reset:s;margin:6px 0}
@@ -156,6 +160,7 @@ async function boot(){
   const resp = await fetch("/api/report/"+encodeURIComponent(LABEL));
   if(!resp.ok){ document.getElementById("content").innerHTML=`<div class="empty">No run report for <code>${esc(LABEL)}</code> — pick a run from the dropdown above.</div>`; return; }
   render(await resp.json());
+  await renderMemoryTimeline();
 }
 
 function renderImmunity(rep){
@@ -207,6 +212,23 @@ function renderImmunity(rep){
   return h;
 }
 
+async function renderMemoryTimeline(){
+  let entries = [];
+  try{ entries = await fetch("/api/memory").then(r=>r.json()); }catch{ return; }
+  if(!entries.length) return;
+  const rows = entries.map(e=>`<div class="qm-row">
+      <div class="qm-h"><span><b>${esc(e.failure_type)}</b> · ${esc(e.triggering_prompt_change)||"—"}</span>
+        <span>${esc((e.timestamp||"").slice(0,10))}</span></div>
+      <div class="qm-lesson">${esc(e.lesson)}</div>
+      <div class="qm-h" style="margin-top:4px">fix: ${esc(e.successful_fix)||"—"} · cases: ${(e.affected_cases||[]).map(esc).join(", ")||"—"}</div>
+    </div>`).join("");
+  const h = `<div class="divider"></div><section><div class="step-label"><span class="n">⊕</span> Quality Memory</div>
+    <h2>Every approved fix becomes institutional memory.</h2>
+    <div class="sub">Each entry is read by future investigations. The loop compounds: regression → diagnosis → fix → memory → faster next time.</div>
+    ${rows}</section>`;
+  document.getElementById("content").insertAdjacentHTML("beforeend", h);
+}
+
 function render(rep){
   const gate = rep.gate || "?";
   document.getElementById("gateChip").outerHTML =
@@ -251,6 +273,7 @@ function render(rep){
         <div class="hyp"><span class="lead">Hypothesis</span>${esc(inv.hypothesis)||"—"}</div>
         <ol class="steps">${(inv.investigation_steps||[]).map(s=>`<li>${esc(s)}</li>`).join("")||"<li>—</li>"}</ol>
         <div class="rootcause"><b>Root cause —</b> ${esc(inv.root_cause?.summary)||"—"} <span style="color:var(--muted)">(policy: ${esc(inv.root_cause?.policy_id)||"?"}, cases: ${(inv.root_cause?.case_ids||[]).map(esc).join(", ")||"—"})</span></div>
+        ${(rep.prior_knowledge&&rep.prior_knowledge.length)?`<div class="priorknow"><b>↺ Prior knowledge applied:</b> ${rep.prior_knowledge.map(e=>esc(e.lesson)).join(" · ")}</div>`:""}
       </div></section><div class="divider"></div>`;
 
     // 3 — the proof
