@@ -6,6 +6,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from agentci.engineer.mint import approve_and_mint
+from datetime import datetime, timezone
+
+from agentci.memory import memory
 
 _RUNS_DIR = Path("runs")
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -35,9 +38,15 @@ def create_app() -> FastAPI:
         if report.get("gate") != "green" or not report.get("proposed_mint"):
             raise HTTPException(status_code=409, detail="nothing to approve (gate not green / no proposed mint)")
         minted = approve_and_mint(report)
+        entry = memory.record_approval(report, datetime.now(timezone.utc).isoformat())
         report["minted"] = minted
+        report["memory_entry"] = entry
         (_RUNS_DIR / f"{label}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-        return {"approved": True, "minted": minted}
+        return {"approved": True, "minted": minted, "memory_entry": entry}
+
+    @app.get("/api/memory")
+    def get_memory():
+        return list(reversed(memory.load_memory()))
 
     if _STATIC.exists():
         app.mount("/", StaticFiles(directory=str(_STATIC), html=True), name="static")
