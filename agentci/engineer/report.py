@@ -3,7 +3,7 @@
 
 def assemble_report(candidate_label, regression, flips, cluster, fix, promotion, mcp_calls,
                     investigation=None, proposed_mint=None, guard_gate=None,
-                    proposed_guard=None, guard_review=None, meta_metrics=None):
+                    proposed_guard=None, guard_review=None, meta_metrics=None, prior_knowledge=None):
     """Build the run report. Encodes all terminal outcomes incl. guard-block (D16) and no-fix->RED."""
     if guard_gate and guard_gate.get("tripped"):
         verdict, gate = "guard_blocked", "red"          # D16: hard block on a learned guard
@@ -27,6 +27,7 @@ def assemble_report(candidate_label, regression, flips, cluster, fix, promotion,
         "proposed_guard": proposed_guard,  # NEW (D15): authored guard + discrimination evidence
         "guard_review": guard_review,      # NEW (D18): adversarial reviewer verdict
         "meta_metrics": meta_metrics,      # NEW (spec §5.10): surfaced by Plan 07
+        "prior_knowledge": prior_knowledge or [],   # NEW: Quality Memory entries the investigator read (D11 amendment)
         "mcp_calls": mcp_calls,
         "verdict": verdict,
         "gate": gate,

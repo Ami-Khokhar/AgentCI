@@ -10,6 +10,7 @@ from agentci.engineer.diagnose import diagnose
 from agentci.engineer.fix_author import author_fix
 from agentci.engineer.guard import run_guard, discrimination_test, load_persisted_guards
 from agentci.engineer.review import review_rubric, passes_review
+from agentci.memory import memory
 
 _MCP_CALLS = {"n": 0}
 
@@ -64,6 +65,7 @@ def run_check(candidate_prompt: str, label: str) -> dict:
 
     cand_tune = run_candidate(candidate_prompt, config.DATASET_NAME, "tune", f"cand-{label}-tune")
     flips = compute_flips(_split(baseline, "tune"), cand_tune)
+    prior_knowledge = memory.find_relevant(flips["pass_to_fail"])
 
     # GUARD GATE (D16): a candidate that trips a previously-minted guard is an instant red.
     guard_gate = _check_persisted_guards(cand_tune)
@@ -81,7 +83,7 @@ def run_check(candidate_prompt: str, label: str) -> dict:
                                guard_gate=guard_gate, meta_metrics=meta)
 
     # AGENTIC diagnosis (D11/D15/D19): root cause + taxonomy + headline + authored guard.
-    diagnosis = diagnose(candidate_prompt, label, flips["pass_to_fail"])
+    diagnosis = diagnose(candidate_prompt, label, flips["pass_to_fail"], prior_lessons=prior_knowledge)
     _MCP_CALLS["n"] += int(diagnosis.get("mcp_calls", 0))
     cluster = diagnosis["root_cause"]
     guard = diagnosis["guard"]
@@ -127,4 +129,5 @@ def run_check(candidate_prompt: str, label: str) -> dict:
     return assemble_report(label, True, flips, cluster, fix, promotion, _mcp_call_count(),
                            investigation=diagnosis, proposed_mint=proposed_mint,
                            guard_gate=guard_gate, proposed_guard=proposed_guard,
-                           guard_review=guard_review, meta_metrics=meta)
+                           guard_review=guard_review, meta_metrics=meta,
+                           prior_knowledge=prior_knowledge)

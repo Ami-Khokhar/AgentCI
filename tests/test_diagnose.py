@@ -40,3 +40,27 @@ def test_author_fix_replays(tmp_path, monkeypatch):
 def test_parse_json_strips_fence():
     out = _parse_json("```json\n{\"a\": 1}\n```")
     assert out["a"] == 1
+
+
+def test_diagnose_empty_lessons_keeps_legacy_cache_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTCI_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENTCI_CACHE_MODE", "replay")
+    payload = {"candidate_prompt": "P", "label": "reg-refund", "pass_to_fail": ["t00"]}
+    (tmp_path / (cache._key("diagnosis", payload) + ".json")).write_text(
+        json.dumps({"root_cause": {"category": "factual_omission"}, "guard": {"kind": "assertion"},
+                    "mcp_calls": 1}))
+    out = diagnose("P", "reg-refund", ["t00"], prior_lessons=[])
+    assert out["root_cause"]["category"] == "factual_omission"
+
+
+def test_diagnose_nonempty_lessons_changes_cache_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTCI_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENTCI_CACHE_MODE", "replay")
+    lessons = [{"failure_type": "factual_omission", "lesson": "concise drops citations"}]
+    payload = {"candidate_prompt": "P", "label": "reg-refund", "pass_to_fail": ["t00"],
+               "prior_lessons": [{"failure_type": "factual_omission", "lesson": "concise drops citations"}]}
+    (tmp_path / (cache._key("diagnosis", payload) + ".json")).write_text(
+        json.dumps({"root_cause": {"category": "factual_omission"}, "guard": {"kind": "assertion"},
+                    "mcp_calls": 2}))
+    out = diagnose("P", "reg-refund", ["t00"], prior_lessons=lessons)
+    assert out["mcp_calls"] == 2

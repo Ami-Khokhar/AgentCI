@@ -6,10 +6,11 @@ import json
 import uuid
 
 from agentci import cache, config
+from agentci.memory import memory
 
 _DIAGNOSIS_GOAL = """The AgentCI regression gate is RED for candidate '{label}'.
 These tune-set cases flipped PASS->FAIL versus baseline: {pass_to_fail}.
-
+{prior_lessons_block}
 Investigate WHY, like a reliability engineer. Use your Phoenix MCP tool `get-experiment-by-id` to
 pull the candidate experiment (id: {cand_experiment_id}) and the baseline (id: {baseline_experiment_id});
 each run carries its `output` and per-case `annotations` (correctness, groundedness, completeness,
@@ -42,7 +43,7 @@ def _parse_json(raw: str) -> dict:
     return json.loads(text)
 
 
-async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[str]) -> tuple[str, int]:
+async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[str], prior_lessons_block: str = "") -> tuple[str, int]:
     from google.adk.runners import InMemoryRunner
     from google.genai import types
     from agentci.engineer.agent import build_engineer_agent
@@ -57,6 +58,7 @@ async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[s
         candidate_prompt=candidate_prompt,
         cand_experiment_id=experiments_registry.get_id(f"cand-{label}-tune"),
         baseline_experiment_id=experiments_registry.get_id("baseline-tune"),
+        prior_lessons_block=("\n" + prior_lessons_block + "\n") if prior_lessons_block else "",
     )
     final, mcp_calls = "", 0
     async for event in runner.run_async(
@@ -71,14 +73,24 @@ async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[s
     return final, mcp_calls
 
 
-def diagnose(candidate_prompt: str, label: str, pass_to_fail: list[str]) -> dict:
-    """Root cause + taxonomy + headline + authored guard. No fix (D19). Cached (D7)."""
+def diagnose(candidate_prompt: str, label: str, pass_to_fail: list[str],
+             prior_lessons: list[dict] | None = None) -> dict:
+    """Root cause + taxonomy + headline + authored guard. No fix (D19). Cached (D7).
+
+    `prior_lessons` (Quality Memory hits, D11 amendment 2026-06-08) are injected into the prompt and
+    join the cache payload ONLY when non-empty, so an empty memory replays the legacy key unchanged.
+    """
+    prior_lessons = prior_lessons or []
     payload = {"candidate_prompt": candidate_prompt, "label": label, "pass_to_fail": sorted(pass_to_fail)}
+    if prior_lessons:
+        payload["prior_lessons"] = [{"failure_type": e.get("failure_type"), "lesson": e.get("lesson")}
+                                    for e in prior_lessons]
+    block = memory.format_for_prompt(prior_lessons)
 
     def live():
         from agentci import throttle
         raw, mcp_calls = throttle.call_with_backoff(
-            lambda: asyncio.run(_run_diagnosis(candidate_prompt, label, pass_to_fail))
+            lambda: asyncio.run(_run_diagnosis(candidate_prompt, label, pass_to_fail, block))
         )
         data = _parse_json(raw)
         data["mcp_calls"] = mcp_calls

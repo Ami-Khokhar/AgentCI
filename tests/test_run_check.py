@@ -5,7 +5,8 @@ def _rows(split, ids, passed):
              "scores": {"correctness": 0.9 if passed else 0.2, "groundedness": 0.9,
                         "completeness": 0.9, "policy_reference": 0.9}} for i in ids]
 
-def test_benign_candidate_returns_green(monkeypatch):
+def test_benign_candidate_returns_green(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
     monkeypatch.setattr(engineer, "fetch_baseline_via_mcp",
                         lambda name: _rows("tune", ["t00"], True) + _rows("held_out", ["h0"], True))
     monkeypatch.setattr(engineer, "run_candidate",
@@ -17,8 +18,9 @@ def test_benign_candidate_returns_green(monkeypatch):
     assert report["meta_metrics"]["guard_tripped"] is None
     assert report["meta_metrics"]["heldout_lift"] is None
 
-def test_persisted_guard_trip_blocks_immediately(monkeypatch):
+def test_persisted_guard_trip_blocks_immediately(tmp_path, monkeypatch):
     # A persisted guard that the candidate's answer fails -> instant guard_blocked, no investigation.
+    monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
     monkeypatch.setattr(engineer, "fetch_baseline_via_mcp",
                         lambda name: _rows("tune", ["t00"], True) + _rows("held_out", ["h0"], True))
     monkeypatch.setattr(engineer, "run_candidate",
@@ -37,7 +39,8 @@ def test_persisted_guard_trip_blocks_immediately(monkeypatch):
     assert report["meta_metrics"]["heldout_correctness"] is None
     assert report["meta_metrics"]["heldout_lift"] is None
 
-def test_regression_with_admitted_guard_and_good_fix(monkeypatch):
+def test_regression_with_admitted_guard_and_good_fix(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))
     def fake_run(prompt, ds, split, name):
         if "FIX" in prompt:
             return _rows(split, ["t00"] if split == "tune" else ["h0"], True)
@@ -46,7 +49,7 @@ def test_regression_with_admitted_guard_and_good_fix(monkeypatch):
                         lambda name: _rows("tune", ["t00"], True) + _rows("held_out", ["h0"], False))
     monkeypatch.setattr(engineer, "run_candidate", fake_run)
     monkeypatch.setattr(engineer, "load_persisted_guards", lambda ds: [])  # no prior guards
-    monkeypatch.setattr(engineer, "diagnose", lambda prompt, label, ptf: {
+    monkeypatch.setattr(engineer, "diagnose", lambda prompt, label, ptf, prior_lessons=None: {
         "hypothesis": "h", "investigation_steps": ["s1"],
         "root_cause": {"label": "refund-policy", "policy_id": "R-14", "category": "factual_omission",
                        "summary": "drops window", "case_ids": ["t00"]},
