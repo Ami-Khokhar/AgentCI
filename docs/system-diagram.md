@@ -105,3 +105,16 @@ flowchart TD
 | `red_no_fix` | red | regression found but no promotable fix |
 
 > The interactive, clickable version of this diagram lives in [`architecture.html`](../architecture.html).
+
+## Quality Memory loop (self-improving)
+
+1. `agentci check --candidate candidates/reg_refund.txt` → regression → investigate → fix → **approve**
+   (dashboard, or `agentci approve --run runs/reg_refund.json`). Approval mints the guard case AND
+   writes a Quality Memory entry: failure_type `factual_omission`, lesson "Making prompts more
+   concise often removes required citation/policy detail from answers."
+2. `agentci check --candidate candidates/reg_concise.txt` → a *similar* citation-suppression
+   regression. Because the flipped cases share the `refund-policy` policy id, the investigator is
+   handed the prior lesson before diagnosing; the report's `prior_knowledge` is non-empty and the
+   dashboard shows **"Prior knowledge applied."**
+
+The loop: regression → diagnosis → fix → validation → approval → memory → stronger future runs.

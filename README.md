@@ -118,6 +118,31 @@ grade its own work (D17/D18); diagnosis and fix-authoring are **separate agents*
 A visual walkthrough of the runtime + eval harness (Mermaid flow traced from `run_check()`) is in
 [`docs/system-diagram.md`](docs/system-diagram.md).
 
+## Quality Memory
+
+AgentCI gets smarter with every approved regression. When a human approves a run, the fix and the
+lesson are archived in a git-tracked store (`agentci/memory/quality_memory.json`). The next time the
+investigator encounters a similar failure — matched by the flipped cases' `policy_id` — it is handed
+the prior lesson before diagnosing, so it starts with context rather than from scratch.
+
+**The rule:** the investigator READS relevant entries (matched by `policy_id`) before diagnosing;
+entries are WRITTEN only on human approval. Reject writes nothing. This is a structural invariant:
+`record_approval` is the single write path, reachable only via `POST /api/approve` and the
+`agentci approve` CLI.
+
+**New surfaces:**
+- `agentci approve --run runs/<label>.json` — CLI approval path (alternative to the dashboard button).
+- `GET /api/memory` — returns the full Quality Memory timeline as JSON.
+- Dashboard "Quality Memory" timeline panel and a **"Prior knowledge applied."** callout when
+  `prior_knowledge` is non-empty in the run report.
+
+**Determinism / testing:** tests point `AGENTCI_MEMORY_PATH` at a `tmp_path` fixture so the real
+store is never read or written during the suite. Matched lessons join the diagnose cache key only when
+non-empty, keeping all existing replay fixtures valid.
+
+This is locked as decision D20; the D11 amendment (investigator is no longer stateless) is recorded
+in [`docs/superpowers/plans/2026-06-01-agentci-00-overview.md`](docs/superpowers/plans/2026-06-01-agentci-00-overview.md).
+
 ## Status
 
 Plans 01–03, the agentic-investigator/surface sprint (Plan 05), the compounding-immunity engine
