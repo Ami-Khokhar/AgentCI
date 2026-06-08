@@ -74,13 +74,15 @@ def run_check(candidate_prompt: str, label: str) -> dict:
                 "guard_tripped": (guard_gate.get("guard") or {}).get("slug"),
                 "guard_admitted": None, "heldout_correctness": None, "heldout_lift": None}
         return assemble_report(label, True, flips, None, None, None, _mcp_call_count(),
-                               guard_gate=guard_gate, meta_metrics=meta)
+                               guard_gate=guard_gate, meta_metrics=meta,
+                               prior_knowledge=prior_knowledge)
 
     if not is_regression(_split(baseline, "tune"), cand_tune):
         meta = {"guards_active": guard_gate.get("ran", 0), "guard_tripped": None,
                 "guard_admitted": None, "heldout_correctness": None, "heldout_lift": None}
         return assemble_report(label, False, flips, None, None, None, _mcp_call_count(),
-                               guard_gate=guard_gate, meta_metrics=meta)
+                               guard_gate=guard_gate, meta_metrics=meta,
+                               prior_knowledge=prior_knowledge)
 
     # AGENTIC diagnosis (D11/D15/D19): root cause + taxonomy + headline + authored guard.
     diagnosis = diagnose(candidate_prompt, label, flips["pass_to_fail"], prior_lessons=prior_knowledge)
