@@ -56,3 +56,18 @@ def test_proposed_guard_and_review_keys_present_by_default():
     assert rep["proposed_guard"] is None
     assert rep["guard_review"] is None
     assert rep["guard_gate"] is None
+
+
+def test_report_carries_prior_knowledge():
+    from agentci.engineer.report import assemble_report
+    hits = [{"failure_type": "factual_omission", "lesson": "concise drops citations"}]
+    rep = assemble_report("reg-concise", True, {"pass_to_fail": ["t05"], "fail_to_pass": []},
+                          None, None, None, 3, prior_knowledge=hits)
+    assert rep["prior_knowledge"] == hits
+
+
+def test_report_prior_knowledge_defaults_empty():
+    from agentci.engineer.report import assemble_report
+    rep = assemble_report("safe", False, {"pass_to_fail": [], "fail_to_pass": []},
+                          None, None, None, 2)
+    assert rep["prior_knowledge"] == []
