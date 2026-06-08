@@ -1,7 +1,7 @@
 """Adversarial rubric review (D18): an independent-family model judges whether a rubric guard is
 specific, non-gameable, and not over-constrained. Only applies to kind='rubric'. Cached (D7)."""
 from agentci import cache, config
-from agentci.engineer.independent_judge import _anthropic_json
+from agentci.engineer.independent_judge import _independent_json
 
 
 def review_rubric(guard: dict) -> dict:
@@ -17,7 +17,7 @@ def review_rubric(guard: dict) -> dict:
             f"RUBRIC: {guard['rubric_prompt']}\n\n"
             'Return ONLY JSON: {"score": <float 0..1>, "notes": "<one sentence>"}'
         )
-        data = _anthropic_json(prompt, config.GUARD_REVIEWER_MODEL)
+        data = _independent_json(prompt, config.GUARD_REVIEWER_MODEL)
         return {"score": max(0.0, min(1.0, float(data.get("score", 0.0)))),
                 "notes": str(data.get("notes", ""))}
 

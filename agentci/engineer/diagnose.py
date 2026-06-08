@@ -10,9 +10,10 @@ from agentci import cache, config
 _DIAGNOSIS_GOAL = """The AgentCI regression gate is RED for candidate '{label}'.
 These tune-set cases flipped PASS->FAIL versus baseline: {pass_to_fail}.
 
-Investigate WHY, like a reliability engineer. Use your Phoenix MCP tools to pull the candidate
-experiment ('cand-{label}-tune'), the baseline ('baseline-tune'), and per-case annotations/traces
-for the flipped cases. Form a hypothesis, verify it holds across the flipped cases and is absent
+Investigate WHY, like a reliability engineer. Use your Phoenix MCP tool `get-experiment-by-id` to
+pull the candidate experiment (id: {cand_experiment_id}) and the baseline (id: {baseline_experiment_id});
+each run carries its `output` and per-case `annotations` (correctness, groundedness, completeness,
+policy_reference scores). Form a hypothesis, verify it holds across the flipped cases and is absent
 from still-passing ones, and refine.
 
 Classify the root cause into EXACTLY ONE category from: {taxonomy}.
@@ -46,6 +47,7 @@ async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[s
     from google.genai import types
     from agentci.engineer.agent import build_engineer_agent
 
+    from agentci import experiments_registry
     runner = InMemoryRunner(agent=build_engineer_agent(), app_name="agentci-diagnose")
     uid, sid = "agentci", uuid.uuid4().hex
     await runner.session_service.create_session(app_name="agentci-diagnose", user_id=uid, session_id=sid)
@@ -53,6 +55,8 @@ async def _run_diagnosis(candidate_prompt: str, label: str, pass_to_fail: list[s
         label=label, pass_to_fail=pass_to_fail,
         taxonomy=", ".join(config.FAILURE_TAXONOMY),
         candidate_prompt=candidate_prompt,
+        cand_experiment_id=experiments_registry.get_id(f"cand-{label}-tune"),
+        baseline_experiment_id=experiments_registry.get_id("baseline-tune"),
     )
     final, mcp_calls = "", 0
     async for event in runner.run_async(
@@ -72,7 +76,10 @@ def diagnose(candidate_prompt: str, label: str, pass_to_fail: list[str]) -> dict
     payload = {"candidate_prompt": candidate_prompt, "label": label, "pass_to_fail": sorted(pass_to_fail)}
 
     def live():
-        raw, mcp_calls = asyncio.run(_run_diagnosis(candidate_prompt, label, pass_to_fail))
+        from agentci import throttle
+        raw, mcp_calls = throttle.call_with_backoff(
+            lambda: asyncio.run(_run_diagnosis(candidate_prompt, label, pass_to_fail))
+        )
         data = _parse_json(raw)
         data["mcp_calls"] = mcp_calls
         return data

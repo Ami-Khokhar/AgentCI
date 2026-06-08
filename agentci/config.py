@@ -1,9 +1,9 @@
 """Single source of truth for model IDs, determinism, thresholds (frozen decisions)."""
 
 # --- Models (pinned for determinism, D7) ---
-TARGET_MODEL = "gemini-2.5-flash"
-ENGINEER_MODEL = "gemini-2.5-pro"
-JUDGE_MODEL = "gemini-2.5-pro"
+TARGET_MODEL = "gemini-2.5-flash"   # D7 (original); recorded via Vertex AI (real quota, no free-tier 20/day cap)
+ENGINEER_MODEL = "gemini-2.5-flash"  # D7 amendment 2026-06-08: pro-tier 429s immediately on the fresh project; flash@us-central1 has real quota
+JUDGE_MODEL = "gemini-2.5-flash"    # D7 amendment 2026-06-08: flash judges run in us-central1 (high quota); pro 429-stalls on the global endpoint
 TEMPERATURE = 0.0
 
 # --- Rubric thresholds (D9) ---
@@ -27,6 +27,8 @@ For refund questions, state the refund window and any eligibility conditions exp
 # --- Cross-family independence (D17/D18): the ruler must not share a brain with the optimizer ---
 IMPROVEMENT_JUDGE_MODEL = "claude-haiku-4-5-20251001"   # frozen held-out correctness ruler
 GUARD_REVIEWER_MODEL = "claude-haiku-4-5-20251001"      # adversarial rubric reviewer
+FREE_RULER_MODEL = "llama-3.3-70b-versatile"            # D17 amendment: Groq free tier, used when GROQ_API_KEY is set
+RULER_VERTEX_MODEL = "claude-haiku-4-5@20251001"        # D17: Claude Haiku on Vertex AI (billed to GCP), used when ANTHROPIC_USE_VERTEX=true
 
 # --- Guard authoring/admission (D15/D18) ---
 FAILURE_TAXONOMY = (

@@ -4,7 +4,14 @@ import re
 
 from google import genai
 
-from agentci import cache, config
+from agentci import cache, config, throttle
+
+
+def _throttled_generate(client, model, prompt, gen_config):
+    """generate_content, globally paced + exponential backoff on 429 (shared Gemini rate gate)."""
+    return throttle.call_with_backoff(
+        lambda: client.models.generate_content(model=model, contents=prompt, config=gen_config)
+    )
 
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
@@ -56,10 +63,11 @@ def _judge(dimension: str, output: dict, expected: dict, metadata: dict) -> floa
             f"ANSWER UNDER TEST:\n{answer}\n\n"
             'Return ONLY JSON: {"score": <float 0..1>, "explanation": "<one sentence>"}'
         )
-        resp = client.models.generate_content(
-            model=config.JUDGE_MODEL,
-            contents=prompt,
-            config={"temperature": config.TEMPERATURE, "response_mime_type": "application/json"},
+        resp = _throttled_generate(
+            client,
+            config.JUDGE_MODEL,
+            prompt,
+            {"temperature": config.TEMPERATURE, "response_mime_type": "application/json"},
         )
         return parse_judge_response(resp.text)
 

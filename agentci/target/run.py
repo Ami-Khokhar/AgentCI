@@ -5,7 +5,7 @@ import uuid
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from agentci import cache, config
+from agentci import cache, config, throttle
 from agentci.target.agent import build_support_agent
 
 
@@ -28,6 +28,11 @@ async def _run_once(system_prompt: str, ticket: str) -> str:
 
 
 def answer_ticket(prompt: str, ticket: str) -> dict:
-    """Run the support agent on one ticket. Cached for determinism (D7)."""
+    """Run the support agent on one ticket. Cached for determinism (D7). The live call is paced
+    + retried on 429 via the shared Gemini rate gate (the ADK runner bursts otherwise)."""
     payload = {"prompt": prompt, "ticket": ticket}
-    return cache.cached("target", payload, lambda: {"answer": asyncio.run(_run_once(prompt, ticket))})
+
+    def live():
+        return {"answer": throttle.call_with_backoff(lambda: asyncio.run(_run_once(prompt, ticket)))}
+
+    return cache.cached("target", payload, live)

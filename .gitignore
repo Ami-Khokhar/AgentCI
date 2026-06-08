@@ -19,3 +19,7 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Generated docs (kept local, not tracked)
+agentci-build-log.html
+architecture.html

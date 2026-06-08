@@ -49,6 +49,7 @@ def author_fix(candidate_prompt: str, root_cause: dict) -> dict:
     payload = {"candidate_prompt": candidate_prompt, "root_cause": root_cause}
 
     def live():
-        return _parse_json(asyncio.run(_run_fix(candidate_prompt, root_cause)))
+        from agentci import throttle
+        return _parse_json(throttle.call_with_backoff(lambda: asyncio.run(_run_fix(candidate_prompt, root_cause))))
 
     return cache.cached("fix", payload, live)

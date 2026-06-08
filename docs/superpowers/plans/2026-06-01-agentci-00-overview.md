@@ -20,7 +20,7 @@
 | D4 | **Candidate battery** | 6 labeled edits: 2 regressive, 2 benign, 2 improving. **The 2 regressive are deliberately different in kind** (Change 4): (a) headline refund-policy **factual omission**, (b) an **over-refusal** regression (routes/declines tickets the KB covers). One investigator characterizing both unlike failures *demonstrates* generalization rather than claiming it. |
 | D5 | **Minted eval cases** | Added to the **tune** partition only. NEVER counted toward held-out (would corrupt the held-out lift claim). **Minting is performed on human approval** (D12), not automatically — the run *proposes* the minted case; the engineer commits it. |
 | D6 | **Rubric** | All four dimensions (correctness, groundedness, resolution-completeness, policy-reference) are **LLM-as-judge**. No code-check rubric dimension. |
-| D7 | **Determinism** | Target agent + judge run at **temperature 0**, pinned model IDs. A **record/replay cache** lets the demo replay a captured real run. Judge stability is verified (GAP-5 mitigation). |
+| D7 | **Determinism** | Target agent + judge run at **temperature 0**, pinned model IDs. A **record/replay cache** lets the demo replay a captured real run. Judge stability is verified (GAP-5 mitigation). **Amended 2026-06-05:** engineer + judge re-pinned `gemini-2.5-pro` → `gemini-3.5-flash` — the live key is free-tier, where every pro-class model has zero quota (instant `RESOURCE_EXHAUSTED`); `gemini-3.5-flash` is a generation newer than 2.5-pro and is the newest model the key can run. Target re-pinned `gemini-2.5-flash` → `gemini-2.5-flash-lite` — the free-tier *daily* quota for 2.5-flash was exhausted during the first record attempt; quotas are per-model and the lite tier has higher free limits. Small-target / newer-investigator asymmetry preserved. |
 | D8 | **Promotion bar** | A fix **qualifies** iff: held-out mean correctness lift ≥ `+0.05` over baseline **AND** zero held-out cases flip pass→fail. A non-qualifying fix keeps the gate **RED** ("regression confirmed, no qualifying fix"). Qualifying only makes a fix *eligible* — actual promotion is human-approved (D12). |
 | D9 | **Pass threshold** | A per-case dimension "passes" iff judge score ≥ `0.7` (scores are 0–1). A case "passes overall" iff all four dimensions pass. |
 | D10 | **Regression flag** | A candidate is flagged as a regression iff ≥ 1 tune-partition case flips pass→fail vs. baseline. Benign edits must produce **zero** pass→fail flips → gate stays green. |
@@ -30,7 +30,7 @@
 | D14 | **Demo built backward from one beat (Change 6)** | The video lives on one gotcha: the fluent, confident, **wrong** refund answer shown beside the old correct one (the answer a human skimming five outputs would have approved), then the investigator catching exactly that case via Phoenix MCP and naming the cause in plain English. Plan 04's surface is designed to make that 20-second beat land. |
 | D15 | **Agent-authored guards** | Guards are agent-authored, hybrid (`assertion`\|`rubric`), and admitted only via a two-sided discrimination test: the guard must FAIL on the regressed answer and PASS on the gold answer. |
 | D16 | **Guard gate (behavior C)** | Tripping a persisted guard is an instant RED plus investigator narration of which learned guard tripped and its origin run. Independent of flip detection. |
-| D17 | **Frozen cross-family improvement ruler** | Held-out correctness lift (D8) is scored by `IMPROVEMENT_JUDGE_MODEL`, a non-Gemini family distinct from `ENGINEER_MODEL`. The agent cannot grade its own homework. |
+| D17 | **Frozen cross-family improvement ruler** | Held-out correctness lift (D8) is scored by `IMPROVEMENT_JUDGE_MODEL`, a non-Gemini family distinct from `ENGINEER_MODEL`. The agent cannot grade its own homework. **Amended 2026-06-05:** the ruler transport is env-selected — when `GROQ_API_KEY` is set, the ruler runs `FREE_RULER_MODEL` (Llama on Groq's free tier; still non-Gemini, so the independence constraint holds) instead of paid Anthropic. Same single choke point (`_independent_json`), same cache keys. |
 | D18 | **Independent guard review** | Rubric guards are reviewed by `GUARD_REVIEWER_MODEL` (independent family) for specificity, gameability, and over-constraint before admission. |
 | D19 | **Diagnose/fix split** | Diagnosis (+ guard authoring) and fix-authoring are separate agents (Engine's lesson: one agent doing both degrades quality). |
 
@@ -72,7 +72,7 @@
 ## Shared tech stack (all plans)
 
 - **Python 3.13**, dependency manager **uv**.
-- **Google ADK** (`google-adk`) for both target and Engineer agents; **Gemini** models (`gemini-2.5-pro` for Engineer/judge, `gemini-2.5-flash` for target — pinned in `agentci/config.py`).
+- **Google ADK** (`google-adk`) for both target and Engineer agents; **Gemini** models (`gemini-3.5-flash` for Engineer/judge — see D7 amendment, `gemini-2.5-flash` for target — pinned in `agentci/config.py`).
 - **OpenInference** ADK auto-instrumentor + **`arize-phoenix-otel`** (`phoenix.otel.register`).
 - **`arize-phoenix-client`** for datasets/experiments.
 - **`@arizeai/phoenix-mcp`** via `npx` as an ADK `McpToolset` (requires Node.js/`npx` on PATH).

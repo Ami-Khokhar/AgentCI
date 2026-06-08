@@ -16,7 +16,7 @@ import warnings
 
 from phoenix.client import Client
 
-from agentci import config
+from agentci import config, experiments_registry
 from agentci.evals.judges import ALL_EVALUATORS
 from agentci.target.run import answer_ticket
 
@@ -70,6 +70,11 @@ def run_candidate(prompt: str, dataset_name: str, split: str, experiment_name: s
         evaluators=ALL_EVALUATORS,
         experiment_name=experiment_name,
     )
+
+    # Phoenix stores experiments anonymously; record the assigned id so the runtime MCP read
+    # (fetch_baseline_via_mcp / diagnose) can fetch this experiment BY ID later.
+    if ran.get("experiment_id"):
+        experiments_registry.register(experiment_name, ran["experiment_id"])
 
     # Index task_runs by run id for fast lookup
     task_runs_by_id: dict[str, dict] = {tr["id"]: tr for tr in ran["task_runs"]}

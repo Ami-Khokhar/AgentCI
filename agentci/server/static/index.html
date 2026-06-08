@@ -153,7 +153,9 @@ async function boot(){
   if(!LABEL && runs.length){ LABEL = runs[0]; }
   if(!LABEL){ document.getElementById("content").innerHTML='<div class="empty">No runs yet. Try <code>agentci check --candidate candidates/reg_refund.txt</code>.</div>'; return; }
   if(![...sel.options].some(o=>o.value===LABEL)) sel.insertAdjacentHTML("afterbegin",`<option selected>${esc(LABEL)}</option>`);
-  render(await fetch("/api/report/"+encodeURIComponent(LABEL)).then(r=>r.json()));
+  const resp = await fetch("/api/report/"+encodeURIComponent(LABEL));
+  if(!resp.ok){ document.getElementById("content").innerHTML=`<div class="empty">No run report for <code>${esc(LABEL)}</code> — pick a run from the dropdown above.</div>`; return; }
+  render(await resp.json());
 }
 
 function renderImmunity(rep){
@@ -293,8 +295,10 @@ async function approve(){
   const t = document.getElementById("approveToast");
   try{
     const r = await fetch("/api/approve/"+encodeURIComponent(LABEL), {method:"POST"});
-    const d = await r.json();
-    if(!r.ok) throw new Error(d.detail||"approve failed");
+    const text = await r.text();
+    let d = {};
+    try{ d = JSON.parse(text); }catch{ /* non-JSON error body (e.g. plain-text 500) */ }
+    if(!r.ok) throw new Error(d.detail||text||"approve failed");
     t.className="toast ok"; t.innerHTML = `✓ Minted <code>${esc(d.minted?.id)}</code> into the tune partition. This regression is now guarded forever.`;
   }catch(e){ t.className="toast err"; t.textContent = "✗ "+e.message; btn.disabled=false; }
 }

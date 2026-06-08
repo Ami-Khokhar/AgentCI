@@ -115,8 +115,8 @@ discrimination test (D15); tripping a persisted guard is an **instant red** (D16
 improvement ruler and the rubric reviewer run on an **independent model family** so the agent can't
 grade its own work (D17/D18); diagnosis and fix-authoring are **separate agents** (D19).
 
-A visual walkthrough of the runtime + eval harness is in [`architecture.html`](architecture.html),
-and a full action-by-action build journal is in [`agentci-build-log.html`](agentci-build-log.html).
+A visual walkthrough of the runtime + eval harness (Mermaid flow traced from `run_check()`) is in
+[`docs/system-diagram.md`](docs/system-diagram.md).
 
 ## Status
 

@@ -6,9 +6,9 @@ def test_thresholds_match_frozen_decisions():
     assert config.MAX_HELDOUT_REGRESSIONS == 0    # D8
 
 def test_models_are_pinned_and_deterministic():
-    assert config.TARGET_MODEL == "gemini-2.5-flash"
-    assert config.ENGINEER_MODEL == "gemini-2.5-pro"
-    assert config.JUDGE_MODEL == "gemini-2.5-pro"
+    assert config.TARGET_MODEL == "gemini-2.5-flash"   # D7 (original)
+    assert config.ENGINEER_MODEL == "gemini-2.5-flash"   # D7 amendment 2026-06-08
+    assert config.JUDGE_MODEL == "gemini-2.5-flash"      # D7 amendment 2026-06-08
     assert config.TEMPERATURE == 0.0             # D7
 
 def test_baseline_prompt_is_registered():

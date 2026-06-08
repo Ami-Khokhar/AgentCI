@@ -26,46 +26,69 @@ def is_regression(baseline: list[dict], candidate: list[dict]) -> bool:
 
 import asyncio
 import json as _json
-import uuid as _uuid
 
 from agentci import cache
 
 
-async def _ask_engineer_for_baseline(experiment_name: str) -> str:
-    """Drive the Engineer agent to fetch baseline per-case scores via Phoenix MCP."""
-    from google.adk.runners import InMemoryRunner
-    from google.genai import types
-    from agentci.engineer.agent import build_engineer_agent
+async def _get_experiment_by_id_via_mcp(experiment_id: str) -> dict:
+    """Call the Phoenix MCP server's get-experiment-by-id over stdio and return the parsed payload.
 
-    runner = InMemoryRunner(agent=build_engineer_agent(), app_name="agentci-engineer")
-    uid, sid = "agentci", _uuid.uuid4().hex
-    await runner.session_service.create_session(
-        app_name="agentci-engineer", user_id=uid, session_id=sid
-    )
-    prompt = (
-        f"Using the Phoenix MCP tools, fetch experiment '{experiment_name}'. For each example "
-        f"return its metadata id, split, the four annotation scores "
-        f"(correctness, groundedness, completeness, policy_reference), and whether it passed "
-        f"(all four >= {0.7}). Return ONLY a JSON array of objects with keys "
-        f'"id","split","passed","scores".'
-    )
-    final = ""
-    async for event in runner.run_async(
-        user_id=uid, session_id=sid,
-        new_message=types.Content(role="user", parts=[types.Part(text=prompt)]),
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            final = event.content.parts[0].text or ""
-    return final
+    Done as a direct, deterministic MCP tool call (not an LLM agent): the experiment holds 160
+    judge scores and an agent transcribing them is both unreliable and burns quota. The agentic
+    reason-act loop lives in diagnose() — this is plumbing that must be exact.
+    """
+    from mcp import ClientSession
+    from mcp.client.stdio import stdio_client
+    from agentci.engineer.agent import phoenix_mcp_server_params
+
+    async with stdio_client(phoenix_mcp_server_params()) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("get-experiment-by-id", {"experiment_id": experiment_id})
+            if getattr(result, "isError", False):
+                raise RuntimeError(f"phoenix-mcp get-experiment-by-id failed: {result.content[0].text[:200]}")
+            return _json.loads(result.content[0].text)
+
+
+def _dataset_example_meta() -> dict:
+    """Map Phoenix dataset_example_id -> example metadata ({'id': 't05', 'split': 'tune', ...})."""
+    from phoenix.client import Client
+    from agentci import config
+    ds = Client().datasets.get_dataset(dataset=config.DATASET_NAME)
+    return {ex["id"]: ex.get("metadata", {}) for ex in ds.examples}
 
 
 def fetch_baseline_via_mcp(experiment_name: str) -> list[dict]:
-    """Return baseline per-case rows, read at runtime THROUGH Phoenix MCP (GAP-4). Cached (D7)."""
+    """Return baseline per-case rows, read at runtime THROUGH Phoenix MCP (GAP-4). Cached (D7).
+
+    Phoenix stores experiments anonymously, so we resolve the logical name -> experiment id via the
+    registry (populated by run_candidate) and fetch it BY ID through the MCP server. The 4 judge
+    annotation scores come from the experiment; id/split come from the dataset example metadata.
+    """
+    from agentci import config, experiments_registry
+
     payload = {"experiment_name": experiment_name}
+    dims = config.RUBRIC_DIMENSIONS
+    threshold = config.PASS_THRESHOLD
 
     def live():
-        raw = asyncio.run(_ask_engineer_for_baseline(experiment_name))
-        text = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        return _json.loads(text)
+        experiment_id = experiments_registry.get_id(experiment_name)
+        data = asyncio.run(_get_experiment_by_id_via_mcp(experiment_id))
+        runs = data.get("experimentResult") or data.get("experiment_result") or []
+        meta_by_example = _dataset_example_meta()
+        rows = []
+        for run in runs:
+            md = meta_by_example.get(run.get("example_id"), {})
+            scores = {a["name"]: float(a.get("score") or 0.0)
+                      for a in (run.get("annotations") or []) if a.get("name") in dims}
+            scores = {dim: scores.get(dim, 0.0) for dim in dims}
+            rows.append({
+                "id": md.get("id"),
+                "split": md.get("split"),
+                "passed": all(scores[dim] >= threshold for dim in dims),
+                "scores": scores,
+                "answer": (run.get("output") or {}).get("answer", "") if isinstance(run.get("output"), dict) else "",
+            })
+        return rows
 
     return cache.cached("mcp_baseline", payload, live)
