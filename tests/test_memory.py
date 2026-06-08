@@ -69,7 +69,14 @@ def test_build_entry_maps_report_fields(monkeypatch):
     assert e["new_eval_cases"] == {"id": "minted-refund-policy-0", "guard_slug": "refund-window"}
     assert e["approval_status"] == "approved"
     assert e["timestamp"] == "2026-06-08T00:00:00+00:00"
-    assert "citation" in e["lesson"].lower() or "detail" in e["lesson"].lower()
+    assert e["lesson"] == memory._LESSON_TEMPLATES["factual_omission"]
+
+
+def test_find_relevant_unknown_ids_returns_empty(monkeypatch):
+    monkeypatch.setattr(memory, "_policy_by_case", lambda: {"t-refund": "refund-policy"})
+    memory.append_entry({"failure_type": "factual_omission", "lesson": "L",
+                         "affected_policies": ["refund-policy"]})
+    assert memory.find_relevant(["t-unknown"]) == []
 
 
 def test_record_approval_appends_and_returns(monkeypatch):

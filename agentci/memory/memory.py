@@ -36,7 +36,12 @@ def _path() -> Path:
 
 
 def load_memory() -> list[dict]:
-    """Return all entries (oldest first). Empty list if the store does not exist."""
+    """Return all entries (oldest first). Empty list if the store does not exist.
+
+    Invariant: the store is always a JSON list (seeded as `[]`, every write goes through
+    `append_entry`). We deliberately do NOT guard against a corrupt/non-list file — a silent
+    fallback would mask data loss; a malformed store should fail loudly.
+    """
     p = _path()
     if not p.exists():
         return []
@@ -44,7 +49,12 @@ def load_memory() -> list[dict]:
 
 
 def append_entry(entry: dict) -> None:
-    """Append one entry to the store, creating it if needed."""
+    """Append one entry to the store, creating it if needed.
+
+    Non-atomic read-modify-write by design: the only writer is `record_approval`, reached
+    synchronously through a single human approval. Do not add a second concurrent writer
+    without introducing a file lock.
+    """
     entries = load_memory()
     entries.append(entry)
     _path().write_text(json.dumps(entries, indent=2), encoding="utf-8")
