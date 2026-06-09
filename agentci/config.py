@@ -29,6 +29,10 @@ IMPROVEMENT_JUDGE_MODEL = "claude-haiku-4-5-20251001"   # frozen held-out correc
 GUARD_REVIEWER_MODEL = "claude-haiku-4-5-20251001"      # adversarial rubric reviewer
 FREE_RULER_MODEL = "llama-3.3-70b-versatile"            # D17 amendment: Groq free tier, used when GROQ_API_KEY is set
 RULER_VERTEX_MODEL = "claude-haiku-4-5@20251001"        # D17: Claude Haiku on Vertex AI (billed to GCP), used when ANTHROPIC_USE_VERTEX=true
+# D17 deviation escape-hatch (AGENTCI_RULER=gemini): when NO non-Gemini endpoint has quota
+# (Claude-on-Vertex defaults to ~0 quota on fresh projects), fall back to a Gemini ruler. This is
+# same-family self-grading and weakens the independence claim — opt-in only, never the default.
+RULER_GEMINI_MODEL = "gemini-2.5-flash"
 
 # --- Guard authoring/admission (D15/D18) ---
 FAILURE_TAXONOMY = (

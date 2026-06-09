@@ -3,6 +3,7 @@
 
 # AgentCI runtime artifacts (created when plans are executed)
 .agentci_cache/
+.agentci_experiments.json
 runs/
 promoted/
 

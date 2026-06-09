@@ -11,32 +11,34 @@ def _parse_fenced_json(text: str) -> dict:
 
 
 def _anthropic_text_with_backoff(client, model: str, prompt: str) -> str:
-    """messages.create with exponential backoff on 429 — the Vertex `global` endpoint shares a
-    prediction quota with the Gemini experiments, so transient rate limits are expected."""
-    import time
-    import anthropic
-    delay = 4.0
-    for attempt in range(6):
-        try:
-            msg = client.messages.create(
-                model=model, max_tokens=512, temperature=config.TEMPERATURE,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return msg.content[0].text
-        except anthropic.RateLimitError:
-            if attempt == 5:
-                raise
-            time.sleep(delay)
-            delay = min(delay * 2, 60.0)
+    """messages.create paced through the shared Gemini rate gate + 429 backoff. Claude-on-Vertex
+    has a low per-minute quota on the `global` endpoint, so the ruler's calls must be spaced (not
+    bursted) and retried — same mechanism as the experiment judges."""
+    from agentci import throttle
+    msg = throttle.call_with_backoff(lambda: client.messages.create(
+        model=model, max_tokens=512, temperature=config.TEMPERATURE,
+        messages=[{"role": "user", "content": prompt}],
+    ))
+    return msg.content[0].text
 
 
 def _independent_json(prompt: str, model: str) -> dict:
-    """Call the independent-family ruler (D17). Provider is env-selected (all non-Gemini, so the
-    ruler never shares a brain with the investigator/fix-author):
+    """Call the independent-family ruler (D17). Provider is env-selected (normally all non-Gemini,
+    so the ruler never shares a brain with the investigator/fix-author):
+    - AGENTCI_RULER=gemini -> Gemini ruler (D17 DEVIATION, same-family self-grading; escape hatch
+      for when no non-Gemini endpoint has quota — Claude-on-Vertex is ~0 quota on fresh projects)
     - Claude on Vertex AI (billed to the GCP project) when ANTHROPIC_USE_VERTEX=true
     - a free Groq key (Llama) when GROQ_API_KEY is set
     - else the direct Anthropic API with `model`."""
     import os
+    if os.environ.get("AGENTCI_RULER") == "gemini":
+        from google import genai
+        from agentci import throttle
+        client = genai.Client()
+        resp = throttle.call_with_backoff(lambda: client.models.generate_content(
+            model=config.RULER_GEMINI_MODEL, contents=prompt,
+            config={"temperature": config.TEMPERATURE, "response_mime_type": "application/json"}))
+        return _parse_fenced_json(resp.text)
     if os.environ.get("ANTHROPIC_USE_VERTEX") == "true":
         from anthropic import AnthropicVertex
         client = AnthropicVertex(

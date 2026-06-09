@@ -39,6 +39,13 @@ def cached(namespace: str, payload: Any, live_fn: Callable[[], Any]) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
 
     if mode == "record":
+        # Fill-if-missing: reuse an existing recording rather than re-running live. This makes
+        # recording RESUMABLE (an interrupted run continues where it stopped) and keeps a cache
+        # internally consistent — e.g. target answers are recorded once, so judges keyed to those
+        # answers never go stale from a non-deterministic (temperature-0 is not exact on Vertex)
+        # re-run. To force fresh values, clear the cache (or AGENTCI_CACHE_DIR) first.
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
         result = live_fn()
         path.write_text(json.dumps(result, default=str), encoding="utf-8")
         return result
