@@ -22,9 +22,16 @@ def test_not_promotable_when_heldout_regression():
     assert out["heldout_regressions"] == 1
     assert out["promotable"] is False
 
-def test_not_promotable_when_lift_too_small():
+def test_promotable_at_baseline_parity():
+    # D8 (amended): a recovery that matches baseline (lift ~0) with no regressions IS promotable.
     base = [_r("h0", True, 0.80)]
-    fixed = [_r("h0", True, 0.82)]   # +0.02 < 0.05
+    fixed = [_r("h0", True, 0.82)]   # +0.02 >= 0.0
+    out = evaluate_promotion(base, fixed)
+    assert out["promotable"] is True
+
+def test_not_promotable_when_below_baseline():
+    base = [_r("h0", True, 0.80)]
+    fixed = [_r("h0", True, 0.75)]   # -0.05 < 0.0 — fix is worse than production
     out = evaluate_promotion(base, fixed)
     assert out["promotable"] is False
 

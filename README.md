@@ -107,9 +107,10 @@ improving edit is ever flagged).
 
 The full frozen-decisions contract (D1–D19) lives in
 [`docs/superpowers/plans/2026-06-01-agentci-00-overview.md`](docs/superpowers/plans/2026-06-01-agentci-00-overview.md).
-Headlines: pinned models + temperature 0 for determinism (D7); a fix is promotable only on
-**held-out** lift ≥ 0.05 with zero held-out regressions (D8); promotion & minting are
-**human-approved** (D12); the investigation is a **genuine agentic reason-act loop** over MCP (D11).
+Headlines: pinned models + temperature 0 for determinism (D7); a fix is promotable only when it is
+**no worse than baseline on held-out** (lift ≥ 0) with zero held-out regressions (D8, recovery-correct
+gate); promotion & minting are **human-approved** (D12); the investigation is a **genuine agentic
+reason-act loop** over MCP (D11).
 The compounding-immunity decisions: guards are **agent-authored** and admitted only via a two-sided
 discrimination test (D15); tripping a persisted guard is an **instant red** (D16); the held-out
 improvement ruler and the rubric reviewer run on an **independent model family** so the agent can't

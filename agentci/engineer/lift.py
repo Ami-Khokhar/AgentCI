@@ -18,11 +18,11 @@ def evaluate_promotion(baseline_heldout: list[dict], fixed_heldout: list[dict]) 
     regressions = len(compute_flips(baseline_heldout, fixed_heldout)["pass_to_fail"])
     promotable = lift >= config.MIN_HELDOUT_LIFT and regressions <= config.MAX_HELDOUT_REGRESSIONS
     if promotable:
-        reason = f"held-out lift {lift:+.3f} >= {config.MIN_HELDOUT_LIFT}, no held-out regressions"
+        reason = f"held-out lift {lift:+.3f} >= {config.MIN_HELDOUT_LIFT:+.2f} (at/above baseline), no held-out regressions"
     elif regressions > config.MAX_HELDOUT_REGRESSIONS:
         reason = f"{regressions} held-out pass->fail flip(s) — gate stays RED"
     else:
-        reason = f"held-out lift {lift:+.3f} < {config.MIN_HELDOUT_LIFT} — insufficient, gate stays RED"
+        reason = f"held-out lift {lift:+.3f} below baseline — fix is worse than production, gate stays RED"
     return {
         "lift": lift,
         "n": len(fixed_heldout),

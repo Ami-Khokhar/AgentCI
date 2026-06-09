@@ -9,8 +9,12 @@ TEMPERATURE = 0.0
 # --- Rubric thresholds (D9) ---
 PASS_THRESHOLD = 0.7          # per-dimension score >= this => "pass"
 
-# --- Promotion gate (D8) ---
-MIN_HELDOUT_LIFT = 0.05       # candidate mean correctness must beat baseline by >= this
+# --- Promotion gate (D8, amended 2026-06-09: recovery-correct criterion) ---
+# A fix is a regression RECOVERY — its goal is to restore baseline behaviour, so its realistic best
+# is parity (lift ~0), not a strict improvement. The original +0.05 bar suited the curated demo but
+# structurally reds real recoveries. The promotion test is therefore "the fix is no worse than
+# baseline (lift >= 0) AND introduces zero new held-out regressions" — the actual safe-to-ship test.
+MIN_HELDOUT_LIFT = 0.0        # fixed mean correctness must be >= baseline (no worse than production)
 MAX_HELDOUT_REGRESSIONS = 0   # zero held-out pass->fail flips allowed
 
 # --- Phoenix dataset naming ---
