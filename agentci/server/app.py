@@ -50,6 +50,29 @@ def create_app() -> FastAPI:
     def get_memory():
         return list(reversed(memory.load_memory()))
 
+    @app.get("/api/meta")
+    def get_meta():
+        """Provenance for the 'recorded live' badge — the models/provider behind a real run."""
+        import os
+        from agentci import config
+        if os.environ.get("AGENTCI_RULER") == "gemini":
+            ruler = f"{config.RULER_GEMINI_MODEL} (same-family fallback)"
+        elif os.environ.get("ANTHROPIC_USE_VERTEX") == "true":
+            ruler = f"{config.RULER_VERTEX_MODEL} on Vertex"
+        elif os.environ.get("GROQ_API_KEY"):
+            ruler = config.FREE_RULER_MODEL
+        else:
+            ruler = config.IMPROVEMENT_JUDGE_MODEL
+        provider = "Vertex AI" if os.environ.get("GOOGLE_GENAI_USE_VERTEXAI") == "true" else "AI Studio"
+        return {
+            "target_model": config.TARGET_MODEL,
+            "engineer_model": config.ENGINEER_MODEL,
+            "judge_model": config.JUDGE_MODEL,
+            "ruler": ruler,
+            "provider": provider,
+            "phoenix_project": os.environ.get("PHOENIX_PROJECT_NAME", "agentci"),
+        }
+
     if _STATIC.exists():
         app.mount("/", StaticFiles(directory=str(_STATIC), html=True), name="static")
     return app

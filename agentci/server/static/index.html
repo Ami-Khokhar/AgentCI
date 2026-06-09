@@ -39,6 +39,10 @@
   .badge{font-size:11px;color:var(--ink-soft);border:1px solid var(--hair);
     padding:4px 10px;border-radius:20px;background:var(--card)}
   .badge b{color:var(--ember);font-weight:600}
+  .badge.live{color:var(--ember);border-color:rgba(194,65,12,.4);background:var(--ember-soft);font-weight:600;letter-spacing:.04em}
+  .legend{font-size:11.5px;color:var(--muted);margin:-22px 0 34px;font-weight:300}
+  .legend code{color:var(--ink-soft)} .legend b.lv-live{color:var(--ember);font-weight:600}
+  .legend .lv-demo{border-bottom:1px dotted var(--muted)}
 
   section{margin-bottom:30px}
   .step-label{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);
@@ -137,9 +141,11 @@
     <span>run:</span>
     <select id="runSelect" onchange="location.search='?run='+this.value"></select>
     <span id="gateChip"></span>
+    <span class="badge" id="provBadge"></span>
     <span class="badge" id="mcpBadge"></span>
     <span class="badge" id="verdictBadge"></span>
   </div>
+  <div class="legend">Each run is one <code>agentci check</code> on a candidate prompt edit. <b class="lv-live">● live</b> = recorded against Phoenix Cloud; <span class="lv-demo">demo</span> = curated illustration.</div>
 
   <div id="content"><div class="empty">Loading run…</div></div>
 </div>
@@ -150,13 +156,30 @@ let LABEL = qs.get("run");
 
 const esc = s => (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 
+// Friendly names + a guided order (green money-shot first, then the live run, then the rest).
+const RUN_INFO = {
+  "demo-reg-refund":    {name:"Promotable fix",    kind:"demo", order:1},
+  "reg_refund":         {name:"Refund regression", kind:"live", order:0},
+  "demo-guard-blocked": {name:"Guard blocked",     kind:"demo", order:2},
+  "demo-legacy":        {name:"No regression",     kind:"demo", order:3},
+};
+const runInfo = r => RUN_INFO[r] || {name:r, kind:(r.startsWith("demo")?"demo":"live"), order:9};
+const optText = r => { const i=runInfo(r); return `${i.kind==="live"?"● ":""}${i.name} · ${i.kind}`; };
+let META = {};
+
 async function boot(){
-  const runs = await fetch("/api/runs").then(r=>r.json()).catch(()=>[]);
+  const [runs, meta] = await Promise.all([
+    fetch("/api/runs").then(r=>r.json()).catch(()=>[]),
+    fetch("/api/meta").then(r=>r.json()).catch(()=>({})),
+  ]);
+  META = meta || {};
+  const ordered = [...runs].sort((a,b)=>runInfo(a).order-runInfo(b).order || a.localeCompare(b));
   const sel = document.getElementById("runSelect");
-  sel.innerHTML = runs.map(r=>`<option ${r===LABEL?"selected":""}>${esc(r)}</option>`).join("");
-  if(!LABEL && runs.length){ LABEL = runs[0]; }
+  // Default to the green money-shot for a clean first impression (no URL params needed).
+  if(!LABEL){ LABEL = ordered.includes("demo-reg-refund") ? "demo-reg-refund" : ordered[0]; }
   if(!LABEL){ document.getElementById("content").innerHTML='<div class="empty">No runs yet. Try <code>agentci check --candidate candidates/reg_refund.txt</code>.</div>'; return; }
-  if(![...sel.options].some(o=>o.value===LABEL)) sel.insertAdjacentHTML("afterbegin",`<option selected>${esc(LABEL)}</option>`);
+  sel.innerHTML = ordered.map(r=>`<option value="${esc(r)}" ${r===LABEL?"selected":""}>${esc(optText(r))}</option>`).join("");
+  if(![...sel.options].some(o=>o.value===LABEL)) sel.insertAdjacentHTML("afterbegin",`<option value="${esc(LABEL)}" selected>${esc(optText(LABEL))}</option>`);
   const resp = await fetch("/api/report/"+encodeURIComponent(LABEL));
   if(!resp.ok){ document.getElementById("content").innerHTML=`<div class="empty">No run report for <code>${esc(LABEL)}</code> — pick a run from the dropdown above.</div>`; return; }
   render(await resp.json());
@@ -235,6 +258,12 @@ function render(rep){
     `<span id="gateChip" class="gate ${gate}">${gate==="green"?"● GREEN":"● RED"}</span>`;
   document.getElementById("mcpBadge").innerHTML = `MCP calls · <b>${esc(rep.mcp_calls)}</b>`;
   document.getElementById("verdictBadge").textContent = (rep.verdict||"").replace(/_/g," ");
+  const prov = document.getElementById("provBadge");
+  if(runInfo(LABEL).kind==="live"){
+    prov.className = "badge live";
+    prov.innerHTML = `● RECORDED LIVE${META.target_model?` · ${esc(META.target_model)} on ${esc(META.provider||"Vertex AI")}`:""}`;
+    prov.title = `target ${esc(META.target_model)} · investigator ${esc(META.engineer_model)} · judges ${esc(META.judge_model)} · ruler ${esc(META.ruler)} · Phoenix ${esc(META.phoenix_project)}`;
+  } else { prov.className = "badge"; prov.textContent = "illustrative demo"; }
 
   const inv = rep.investigation || {};
   const ex = inv.headline_example || null;
@@ -276,9 +305,14 @@ function render(rep){
         ${(rep.prior_knowledge&&rep.prior_knowledge.length)?`<div class="priorknow"><b>↺ Prior knowledge applied:</b> ${rep.prior_knowledge.map(e=>esc(e.lesson)).join(" · ")}</div>`:""}
       </div></section><div class="divider"></div>`;
 
-    // 3 — the proof
+    // 3 — the proof (framing adapts to the gate: green proved it, red didn't clear the bar)
+    const proved = gate==="green";
     h += `<section><div class="step-label"><span class="n">3</span> The proof</div>
-      <h2>It proposed a fix and proved it on held-out data.</h2>
+      <h2>${proved?"It proposed a fix and proved it on held-out data."
+                  :"It proposed a fix — but it didn't clear the held-out bar."}</h2>
+      <div class="sub">${proved
+        ? "Applied to the held-out split the candidate never trained on, scored by the independent ruler — the fix earned its promotion."
+        : "Applied to the held-out split the candidate never trained on, scored by the independent ruler — it missed the +0.05 lift bar, so nothing is promoted and the gate stays red."}</div>
       <div class="grid2">`;
     const lift = prom ? prom.lift : null;
     h += `<div class="metric"><div class="k">Held-out correctness lift</div>
