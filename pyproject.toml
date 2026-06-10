@@ -16,6 +16,7 @@ dependencies = [
     "uvicorn>=0.29.0",
     "mcp>=1.27.2",
     "anthropic>=0.40",
+    "openinference-instrumentation-google-genai>=0.1.0",
 ]
 
 [project.optional-dependencies]

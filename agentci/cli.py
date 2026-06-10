@@ -21,6 +21,13 @@ def cli():
 @click.option("--runs-dir", default="runs", help="Directory to write the run report JSON into.")
 def check(candidate, label, runs_dir):
     """Run a regression check on a candidate prompt and write its report."""
+    import os
+    if os.environ.get("AGENTCI_CACHE_MODE", "replay") in ("record", "live"):
+        # OpenInference tracing only when model calls actually fire — replay mode is offline
+        # by contract (tests, demo) and must not touch the Phoenix collector.
+        from agentci.tracing import init_tracing
+        init_tracing()
+
     prompt = Path(candidate).read_text(encoding="utf-8").strip()
     label = label or Path(candidate).stem
     report = run_check(prompt, label)
