@@ -60,7 +60,7 @@ def test_regression_with_admitted_guard_and_good_fix(tmp_path, monkeypatch):
                   "origin": {"label": "refund-policy"}},
         "mcp_calls": 3})
     monkeypatch.setattr(engineer, "author_fix",
-                        lambda prompt, rc: {"revised_prompt": prompt + " FIX", "rationale": "r"})
+                        lambda prompt, rc, baseline: {"revised_prompt": prompt + " FIX", "rationale": "r"})
     # discrimination: guard fails on candidate's wrong answer, passes on the gold answer
     monkeypatch.setattr(engineer, "discrimination_test",
                         lambda g, bad_answer, good_answer: {"admitted": True, "fails_on_bad": True, "passes_on_good": True})

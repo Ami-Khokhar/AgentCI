@@ -15,12 +15,24 @@ def test_promotable_when_lift_and_no_regressions():
     assert out["lift"] == 0.3 and out["heldout_regressions"] == 0
     assert out["promotable"] is True and out["n"] == 2
 
-def test_not_promotable_when_heldout_regression():
-    base = [_r("h0", True, 0.9)]
-    fixed = [_r("h0", False, 0.4)]   # pass->fail on held-out
+def test_not_promotable_when_flips_exceed_noise_floor():
+    # D8 (amended 2026-06-10): 3 flips > the measured noise floor (2) blocks, even with lift >= 0.
+    base = [_r(f"h{i}", True, 0.7) for i in range(4)]
+    fixed = ([_r(f"h{i}", False, 0.7) for i in range(3)] + [_r("h3", True, 0.8)])
     out = evaluate_promotion(base, fixed)
-    assert out["heldout_regressions"] == 1
+    assert out["lift"] >= 0                      # the flip leg, not the lift leg, must block
+    assert out["heldout_regressions"] == 3
     assert out["promotable"] is False
+
+def test_promotable_when_flips_within_noise_floor():
+    # D8 (amended 2026-06-10): flips at/below the measured baseline-vs-baseline noise floor (2)
+    # are sampling noise, not new regressions — they do not block a lift >= 0 recovery.
+    base = [_r(f"h{i}", True, 0.7) for i in range(4)]
+    fixed = ([_r(f"h{i}", False, 0.6) for i in range(2)] + [_r("h2", True, 0.9), _r("h3", True, 0.9)])
+    out = evaluate_promotion(base, fixed)
+    assert out["heldout_regressions"] == 2
+    assert out["lift"] >= 0
+    assert out["promotable"] is True
 
 def test_promotable_at_baseline_parity():
     # D8 (amended): a recovery that matches baseline (lift ~0) with no regressions IS promotable.

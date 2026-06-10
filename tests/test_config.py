@@ -3,7 +3,7 @@ from agentci import config
 def test_thresholds_match_frozen_decisions():
     assert config.PASS_THRESHOLD == 0.7          # D9
     assert config.MIN_HELDOUT_LIFT == 0.0         # D8 (amended 2026-06-09: recovery-correct — no worse than baseline)
-    assert config.MAX_HELDOUT_REGRESSIONS == 0    # D8
+    assert config.MAX_HELDOUT_REGRESSIONS == 2    # D8 (amended 2026-06-10: measured baseline-vs-baseline noise floor)
 
 def test_models_are_pinned_and_deterministic():
     assert config.TARGET_MODEL == "gemini-2.5-flash"   # D7 (original)

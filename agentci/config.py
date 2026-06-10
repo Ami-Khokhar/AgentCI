@@ -14,8 +14,14 @@ PASS_THRESHOLD = 0.7          # per-dimension score >= this => "pass"
 # is parity (lift ~0), not a strict improvement. The original +0.05 bar suited the curated demo but
 # structurally reds real recoveries. The promotion test is therefore "the fix is no worse than
 # baseline (lift >= 0) AND introduces zero new held-out regressions" — the actual safe-to-ship test.
+# Amended 2026-06-10 (noise-calibrated flip leg): the flip threshold is the MEASURED sampling-noise
+# floor, not zero. scripts/calibrate_gate.py re-samples the unchanged baseline prompt on held-out
+# and gates it against its own recorded answers: lift 0.0 but 2 pass->fail flips (Vertex temp-0 is
+# not reproducible; judge scores wobble; knife-edge cases sit at exactly 0.70). A zero-flip gate
+# reds a literal no-op, so it cannot pass any real recovery. Re-measure the floor (re-run the
+# script with a cleared .agentci_cache_calib) whenever target/judge/ruler models change.
 MIN_HELDOUT_LIFT = 0.0        # fixed mean correctness must be >= baseline (no worse than production)
-MAX_HELDOUT_REGRESSIONS = 0   # zero held-out pass->fail flips allowed
+MAX_HELDOUT_REGRESSIONS = 2   # measured baseline-vs-baseline noise floor (2/16 held-out, 2026-06-10)
 
 # --- Phoenix dataset naming ---
 DATASET_NAME = "agentci-support-suite"
@@ -34,9 +40,11 @@ GUARD_REVIEWER_MODEL = "claude-haiku-4-5-20251001"      # adversarial rubric rev
 FREE_RULER_MODEL = "llama-3.3-70b-versatile"            # D17 amendment: Groq free tier, used when GROQ_API_KEY is set
 RULER_VERTEX_MODEL = "claude-haiku-4-5@20251001"        # D17: Claude Haiku on Vertex AI (billed to GCP), used when ANTHROPIC_USE_VERTEX=true
 # D17 deviation escape-hatch (AGENTCI_RULER=gemini): when NO non-Gemini endpoint has quota
-# (Claude-on-Vertex defaults to ~0 quota on fresh projects), fall back to a Gemini ruler. This is
-# same-family self-grading and weakens the independence claim — opt-in only, never the default.
-RULER_GEMINI_MODEL = "gemini-2.5-flash"
+# (Claude-on-Vertex defaults to ~0 quota on fresh projects), fall back to a Gemini ruler.
+# Amended 2026-06-09: flash-lite, NOT flash — a distinct checkpoint from ENGINEER_MODEL (different
+# weights, separate quota pool), so the fix-author never grades its own output with its own weights.
+# Checkpoint separation is still weaker than cross-family — opt-in only, never the default.
+RULER_GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 # --- Guard authoring/admission (D15/D18) ---
 FAILURE_TAXONOMY = (

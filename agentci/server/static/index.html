@@ -312,15 +312,17 @@ function render(rep){
                   :"It proposed a fix — but it didn't clear the held-out bar."}</h2>
       <div class="sub">${proved
         ? "Applied to the held-out split the candidate never trained on, scored by the independent ruler — the fix earned its promotion."
-        : "Applied to the held-out split the candidate never trained on, scored by the independent ruler — it missed the +0.05 lift bar, so nothing is promoted and the gate stays red."}</div>
+        : "Applied to the held-out split the candidate never trained on, scored by the independent ruler — it missed the recovery bar (lift ≥ 0 with flips within the measured noise floor), so nothing is promoted and the gate stays red."}</div>
       <div class="grid2">`;
     const lift = prom ? prom.lift : null;
+    const minLift = prom?.min_lift ?? 0;                 // gate thresholds ride the report (D8)
+    const maxRegs = prom?.max_regressions ?? 0;
     h += `<div class="metric"><div class="k">Held-out correctness lift</div>
-        <div class="v ${lift>=0.05?"pos":"neg"}">${lift==null?"—":(lift>=0?"+":"")+lift}</div>
+        <div class="v ${lift>=minLift?"pos":"neg"}">${lift==null?"—":(lift>=0?"+":"")+lift}</div>
         <div class="d">${esc(prom?.reason)||""}</div></div>
       <div class="metric"><div class="k">Held-out regressions</div>
-        <div class="v ${(prom?.heldout_regressions)?"neg":"pos"}">${prom?prom.heldout_regressions:"—"}</div>
-        <div class="d">on ${prom?prom.n:"—"} held-out cases the fix never trained on</div></div></div>`;
+        <div class="v ${(prom?.heldout_regressions)<=maxRegs?"pos":"neg"}">${prom?prom.heldout_regressions:"—"}</div>
+        <div class="d">on ${prom?prom.n:"—"} held-out cases — noise floor is ${maxRegs} (a baseline-vs-baseline resample flips that many)</div></div></div>`;
     if(fix){
       h += `<div class="metric" style="margin-top:14px"><div class="k">Proposed fix — ${esc(fix.rationale)}</div>
         <pre class="fix">${esc(fix.revised_prompt)}</pre></div>`;

@@ -25,7 +25,8 @@ def _anthropic_text_with_backoff(client, model: str, prompt: str) -> str:
 def _independent_json(prompt: str, model: str) -> dict:
     """Call the independent-family ruler (D17). Provider is env-selected (normally all non-Gemini,
     so the ruler never shares a brain with the investigator/fix-author):
-    - AGENTCI_RULER=gemini -> Gemini ruler (D17 DEVIATION, same-family self-grading; escape hatch
+    - AGENTCI_RULER=gemini -> Gemini ruler (D17 DEVIATION, same-family but a distinct checkpoint
+      — RULER_GEMINI_MODEL is flash-lite, not the flash that authors fixes; escape hatch
       for when no non-Gemini endpoint has quota — Claude-on-Vertex is ~0 quota on fresh projects)
     - Claude on Vertex AI (billed to the GCP project) when ANTHROPIC_USE_VERTEX=true
     - a free Groq key (Llama) when GROQ_API_KEY is set

@@ -22,5 +22,4 @@ Thumbs.db
 .worktrees/
 
 # Generated docs (kept local, not tracked)
-agentci-build-log.html
-architecture.html
+.agentci_cache_calib/

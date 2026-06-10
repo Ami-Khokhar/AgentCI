@@ -91,8 +91,8 @@ def run_check(candidate_prompt: str, label: str) -> dict:
     guard = diagnosis["guard"]
     headline = diagnosis.get("headline_example", {})
 
-    # Separate fix-author agent (D19).
-    fix = author_fix(candidate_prompt, cluster)
+    # Separate fix-author agent (D19); it sees the baseline it must recover to (D8).
+    fix = author_fix(candidate_prompt, cluster, config.BASELINE_SUPPORT_PROMPT)
 
     # Guard admission (D15): two-sided discrimination using the headline's wrong vs correct answers.
     disc = discrimination_test(guard, bad_answer=headline.get("candidate_answer", ""),

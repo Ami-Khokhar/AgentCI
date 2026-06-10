@@ -1,6 +1,7 @@
 import json
 from agentci import cache
 from agentci.engineer.diagnose import diagnose, _parse_json
+from agentci.engineer import fix_author
 from agentci.engineer.fix_author import author_fix
 
 def test_diagnose_replays_with_guard_and_taxonomy(tmp_path, monkeypatch):
@@ -31,10 +32,12 @@ def test_author_fix_replays(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTCI_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("AGENTCI_CACHE_MODE", "replay")
     root_cause = {"label": "refund-policy", "summary": "drops the 14-day window"}
-    payload = {"candidate_prompt": "P", "root_cause": root_cause}
+    goal = fix_author._FIX_GOAL.format(candidate_prompt="P", root_cause=json.dumps(root_cause),
+                                       baseline_prompt="B")
+    payload = {"goal": goal}
     (tmp_path / (cache._key("fix", payload) + ".json")).write_text(
         json.dumps({"revised_prompt": "P + state refund window", "rationale": "restores detail"}))
-    out = author_fix("P", root_cause)
+    out = author_fix("P", root_cause, "B")
     assert out["revised_prompt"] == "P + state refund window"
 
 def test_parse_json_strips_fence():

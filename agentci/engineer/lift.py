@@ -18,9 +18,12 @@ def evaluate_promotion(baseline_heldout: list[dict], fixed_heldout: list[dict]) 
     regressions = len(compute_flips(baseline_heldout, fixed_heldout)["pass_to_fail"])
     promotable = lift >= config.MIN_HELDOUT_LIFT and regressions <= config.MAX_HELDOUT_REGRESSIONS
     if promotable:
-        reason = f"held-out lift {lift:+.3f} >= {config.MIN_HELDOUT_LIFT:+.2f} (at/above baseline), no held-out regressions"
+        reason = (f"held-out lift {lift:+.3f} >= {config.MIN_HELDOUT_LIFT:+.2f} (at/above baseline), "
+                  f"{regressions} flip(s) within the measured noise floor "
+                  f"(<= {config.MAX_HELDOUT_REGRESSIONS}, baseline-vs-baseline resample)")
     elif regressions > config.MAX_HELDOUT_REGRESSIONS:
-        reason = f"{regressions} held-out pass->fail flip(s) — gate stays RED"
+        reason = (f"{regressions} held-out pass->fail flip(s) exceeds the measured noise floor "
+                  f"({config.MAX_HELDOUT_REGRESSIONS}) — gate stays RED")
     else:
         reason = f"held-out lift {lift:+.3f} below baseline — fix is worse than production, gate stays RED"
     return {
@@ -29,6 +32,10 @@ def evaluate_promotion(baseline_heldout: list[dict], fixed_heldout: list[dict]) 
         "heldout_regressions": regressions,
         "promotable": promotable,
         "reason": reason,
+        # The thresholds the verdict was judged against, so consumers (dashboard) can render
+        # pass/fail per metric without hardcoding gate values that D8 amendments move.
+        "min_lift": config.MIN_HELDOUT_LIFT,
+        "max_regressions": config.MAX_HELDOUT_REGRESSIONS,
     }
 
 
