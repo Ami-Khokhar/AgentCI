@@ -8,6 +8,7 @@ import {
   useCurrentFrame,
 } from "remotion";
 import manifest from "./narration-manifest.json";
+import { SCENES } from "./scenes";
 
 export const FPS = 30;
 
@@ -114,17 +115,20 @@ const ClipFrame: React.FC<{ beat: Beat }> = ({ beat }) => {
 
 const ContentBeat: React.FC<{ beat: Beat; durationInFrames: number }> = ({ beat, durationInFrames }) => {
   const opacity = useFade(durationInFrames);
+  const Scene = SCENES[beat.id];
+  // Animated step-scene fills the frame above the caption band. A real screen-capture clip,
+  // when present, overlays the scene (set CLIP_AVAILABLE.<clip> = true to use footage instead).
+  const useClip = beat.clip !== null && CLIP_AVAILABLE[beat.clip];
   return (
     <AbsoluteFill style={{ backgroundColor: CREAM, opacity }}>
-      {/* clip / placeholder fills the frame; caption sits in a lower band */}
-      <AbsoluteFill style={{ bottom: 240 }}>
-        <ClipFrame beat={beat} />
+      <AbsoluteFill style={{ bottom: 230 }}>
+        {useClip ? <ClipFrame beat={beat} /> : Scene ? <Scene /> : <ClipFrame beat={beat} />}
       </AbsoluteFill>
-      <AbsoluteFill style={{ top: undefined, height: 240, bottom: 0, backgroundColor: INK }}>
+      <AbsoluteFill style={{ top: undefined, height: 230, bottom: 0, backgroundColor: INK }}>
         <div
           style={{
-            fontFamily: SERIF, fontSize: 34, lineHeight: 1.4, color: "#F4EFE6",
-            padding: "34px 90px", display: "flex", alignItems: "center", height: "100%",
+            fontFamily: SERIF, fontSize: 32, lineHeight: 1.4, color: "#F4EFE6",
+            padding: "30px 90px", display: "flex", alignItems: "center", height: "100%",
           }}
         >
           <span style={{ borderLeft: `4px solid ${GREEN}`, paddingLeft: 26 }}>{beat.text}</span>

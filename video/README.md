@@ -2,8 +2,14 @@
 
 A ~92s Remotion video for the hackathon submission: 6 beats (intro → gotcha →
 investigation → proof → oversight → outro), Google Cloud TTS narration, captions, and
-dashboard-matched styling. It renders complete **without footage** (labelled placeholder
-cards mark each clip slot), so you can preview the shape, then drop in real screen captures.
+dashboard-matched styling. Each content beat is a fully **animated step-scene** that shows
+how the agent works — the prompt-diff gotcha, the investigator's reason-act loop querying
+Phoenix over MCP (case dots flip red → investigator → MCP queries → root cause types in),
+the held-out proof (bars + lift count-up + gate flips green), and the compounding-memory
+loop. It renders complete with **no footage required**.
+
+Optional: to overlay a real screen-capture clip on a beat instead of its animation, drop
+footage at `public/clips/<id>.mp4` and set `CLIP_AVAILABLE.<id> = true` in `src/AgentCI.tsx`.
 
 ## Render it
 
