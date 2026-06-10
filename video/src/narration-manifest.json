@@ -1,0 +1,38 @@
+[
+  {
+    "id": "intro",
+    "clip": null,
+    "text": "AgentCI. Regression CI for AI agents.",
+    "audio_sec": 2.928
+  },
+  {
+    "id": "gotcha",
+    "clip": "a",
+    "text": "A one-line prompt edit \u2014 keep answers short \u2014 ships to a support agent. The new answer reads fine. It even cites a policy. A reviewer skimming five outputs would approve it. But it silently dropped the refund window the policy requires. Fluent, confident, and wrong.",
+    "audio_sec": 14.928
+  },
+  {
+    "id": "investigation",
+    "clip": "b",
+    "text": "AgentCI catches it. The regression gate goes red \u2014 ten cases flipped from pass to fail. Then a Gemini investigator takes over. Not a script \u2014 a real reason-act loop. It pulls the baseline and candidate experiments through the Phoenix M C P server, compares them case by case, and names the root cause in plain English: the brevity instruction is suppressing required policy citations.",
+    "audio_sec": 22.2
+  },
+  {
+    "id": "proof",
+    "clip": "d",
+    "text": "A separate agent writes the fix. It restores the full policy contract and drops the harmful constraint. Then AgentCI proves it on a held-out split the candidate never saw, scored by an independent judge. Lift is positive, and held-out regressions stay within the noise floor we measured by re-sampling production against itself. The gate goes green.",
+    "audio_sec": 19.176
+  },
+  {
+    "id": "oversight",
+    "clip": "e",
+    "text": "Nothing auto-merges. A human approves \u2014 and approval mints this exact failure as a permanent eval case, and writes the lesson to Quality Memory. Next time a prompt change touches refund policy, the investigator starts with that lesson, and the regression can never silently return. Every caught failure makes the CI stronger.",
+    "audio_sec": 19.248
+  },
+  {
+    "id": "outro",
+    "clip": null,
+    "text": "AgentCI. Gemini and Google A D K, Phoenix tracing and M C P. Regression CI that improves itself \u2014 under your oversight.",
+    "audio_sec": 8.064
+  }
+]
