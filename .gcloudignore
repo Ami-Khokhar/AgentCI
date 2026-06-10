@@ -9,7 +9,6 @@
 .agentci_cache/
 .agentci_cache_calib/
 .agentci_cache_traces/
-.agentci_experiments.json
 node_modules/
 __pycache__/
 *.pyc

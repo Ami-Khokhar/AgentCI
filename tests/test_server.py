@@ -70,6 +70,45 @@ def test_approve_already_approved_is_409(monkeypatch, tmp_path):
     assert c.post("/api/approve/reg").status_code == 409
 
 
+def test_investigate_runs_diagnose_and_polls_to_done(monkeypatch, tmp_path):
+    import time
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "candidates").mkdir()
+    (tmp_path / "candidates" / "reg.txt").write_text("candidate prompt", encoding="utf-8")
+    _seed(tmp_path, "reg", {"regression_detected": True, "flips": {"pass_to_fail": ["t06", "t08"]}})
+    seen = {}
+    def fake_diagnose(prompt, label, pass_to_fail):
+        seen.update(prompt=prompt, label=label, ptf=pass_to_fail)
+        return {"root_cause": {"summary": "brevity dropped citations"}, "mcp_calls": 3}
+    import sys  # the submodule is shadowed by the re-exported fn in agentci.engineer's namespace
+    monkeypatch.setattr(sys.modules["agentci.engineer.diagnose"], "diagnose", fake_diagnose)
+    monkeypatch.setattr("agentci.tracing.init_tracing", lambda: None)
+    appmod._INVESTIGATIONS.clear()
+    c = TestClient(appmod.create_app())
+    assert c.post("/api/investigate/reg").json()["state"] == "running"
+    for _ in range(50):
+        s = c.get("/api/investigate/reg/status").json()
+        if s["state"] != "running":
+            break
+        time.sleep(0.05)
+    assert s["state"] == "done"
+    assert s["result"]["mcp_calls"] == 3
+    assert seen == {"prompt": "candidate prompt", "label": "reg", "ptf": ["t06", "t08"]}
+
+def test_investigate_409_when_no_regression(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    _seed(tmp_path, "benign", {"regression_detected": False})
+    appmod._INVESTIGATIONS.clear()
+    c = TestClient(appmod.create_app())
+    assert c.post("/api/investigate/benign").status_code == 409
+
+def test_investigation_status_idle_when_never_started(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    appmod._INVESTIGATIONS.clear()
+    c = TestClient(appmod.create_app())
+    assert c.get("/api/investigate/whatever/status").json()["state"] == "idle"
+
+
 def test_get_memory_endpoint_newest_first(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("AGENTCI_MEMORY_PATH", str(tmp_path / "qm.json"))

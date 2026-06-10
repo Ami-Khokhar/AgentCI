@@ -101,6 +101,12 @@
   .reject{background:transparent;color:var(--ink-soft);border-color:var(--hair)}
   button:disabled{opacity:.45;cursor:not-allowed;transform:none}
   .approve-note{font-size:12px;color:var(--ink-soft)}
+  .live-btn{background:var(--red);color:#fff;border-color:var(--red);box-shadow:4px 4px 0 -1px var(--red-soft);margin-top:14px}
+  .live-status{margin-top:14px;font-size:13px;display:flex;align-items:center;gap:9px;color:var(--ink-soft)}
+  .live-dot{width:9px;height:9px;border-radius:50%;background:var(--red);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .live-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--green);
+    background:var(--green-soft);border:1px solid rgba(63,125,78,.4);border-radius:3px;padding:2px 8px;margin-left:8px}
   .toast{margin-top:14px;font-size:13px;padding:10px 14px;border-radius:4px;display:none}
   .toast.ok{display:block;background:var(--green-soft);color:var(--green);border:1px solid rgba(63,125,78,.4)}
   .toast.err{display:block;background:var(--red-soft);color:var(--red);border:1px solid rgba(179,38,30,.4)}
@@ -166,6 +172,7 @@ const RUN_INFO = {
 const runInfo = r => RUN_INFO[r] || {name:r, kind:(r.startsWith("demo")?"demo":"live"), order:9};
 const optText = r => { const i=runInfo(r); return `${i.kind==="live"?"● ":""}${i.name} · ${i.kind}`; };
 let META = {};
+let lastReport = null;
 
 async function boot(){
   const [runs, meta] = await Promise.all([
@@ -175,8 +182,10 @@ async function boot(){
   META = meta || {};
   const ordered = [...runs].sort((a,b)=>runInfo(a).order-runInfo(b).order || a.localeCompare(b));
   const sel = document.getElementById("runSelect");
-  // Default to the green money-shot for a clean first impression (no URL params needed).
-  if(!LABEL){ LABEL = ordered.includes("demo-reg-refund") ? "demo-reg-refund" : ordered[0]; }
+  // Default to the real recorded green run (live investigator works on it); fall back to the
+  // curated demo, then anything.
+  if(!LABEL){ LABEL = ordered.includes("reg_refund") ? "reg_refund"
+    : (ordered.includes("demo-reg-refund") ? "demo-reg-refund" : ordered[0]); }
   if(!LABEL){ document.getElementById("content").innerHTML='<div class="empty">No runs yet. Try <code>agentci check --candidate candidates/reg_refund.txt</code>.</div>'; return; }
   sel.innerHTML = ordered.map(r=>`<option value="${esc(r)}" ${r===LABEL?"selected":""}>${esc(optText(r))}</option>`).join("");
   if(![...sel.options].some(o=>o.value===LABEL)) sel.insertAdjacentHTML("afterbegin",`<option value="${esc(LABEL)}" selected>${esc(optText(LABEL))}</option>`);
@@ -253,6 +262,7 @@ async function renderMemoryTimeline(){
 }
 
 function render(rep){
+  lastReport = rep;
   const gate = rep.gate || "?";
   document.getElementById("gateChip").outerHTML =
     `<span id="gateChip" class="gate ${gate}">${gate==="green"?"● GREEN":"● RED"}</span>`;
@@ -298,12 +308,11 @@ function render(rep){
     h += `<section><div class="step-label"><span class="n">2</span> The investigation</div>
       <h2>The agent investigated it through Phoenix MCP.</h2>
       <div class="sub">Not a script — a reason-act loop: it formed a hypothesis, pulled the experiments and traces it needed via MCP, checked the pattern, and named the cause.</div>
-      <div class="panel">
-        <div class="hyp"><span class="lead">Hypothesis</span>${esc(inv.hypothesis)||"—"}</div>
-        <ol class="steps">${(inv.investigation_steps||[]).map(s=>`<li>${esc(s)}</li>`).join("")||"<li>—</li>"}</ol>
-        <div class="rootcause"><b>Root cause —</b> ${esc(inv.root_cause?.summary)||"—"} <span style="color:var(--muted)">(policy: ${esc(inv.root_cause?.policy_id)||"?"}, cases: ${(inv.root_cause?.case_ids||[]).map(esc).join(", ")||"—"})</span></div>
-        ${(rep.prior_knowledge&&rep.prior_knowledge.length)?`<div class="priorknow"><b>↺ Prior knowledge applied:</b> ${rep.prior_knowledge.map(e=>esc(e.lesson)).join(" · ")}</div>`:""}
-      </div></section><div class="divider"></div>`;
+      <div class="panel" id="invPanel">${renderInvestigation(inv, rep)}</div>
+      ${(META.investigable_runs||[]).includes(LABEL)?`
+      <button class="live-btn" id="liveInvBtn" onclick="investigateLive()">▶ Run this investigation live</button>
+      <div class="live-status" id="liveInvStatus" style="display:none"></div>`:""}
+      </section><div class="divider"></div>`;
 
     // 3 — the proof (framing adapts to the gate: green proved it, red didn't clear the bar)
     const proved = gate==="green";
@@ -347,6 +356,50 @@ function render(rep){
     h += `</section>`;
   }
   document.getElementById("content").innerHTML = h;
+}
+
+function renderInvestigation(inv, rep, live){
+  return `${live?`<div class="live-badge">● INVESTIGATED LIVE · ${inv.mcp_calls||0} real Phoenix MCP calls</div>`:""}
+    <div class="hyp"><span class="lead">Hypothesis</span>${esc(inv.hypothesis)||"—"}</div>
+    <ol class="steps">${(inv.investigation_steps||[]).map(s=>`<li>${esc(s)}</li>`).join("")||"<li>—</li>"}</ol>
+    <div class="rootcause"><b>Root cause —</b> ${esc(inv.root_cause?.summary)||"—"} <span style="color:var(--muted)">(policy: ${esc(inv.root_cause?.policy_id)||"?"}, cases: ${(inv.root_cause?.case_ids||[]).map(esc).join(", ")||"—"})</span></div>
+    ${(rep.prior_knowledge&&rep.prior_knowledge.length)?`<div class="priorknow"><b>↺ Prior knowledge applied:</b> ${rep.prior_knowledge.map(e=>esc(e.lesson)).join(" · ")}</div>`:""}`;
+}
+
+async function investigateLive(){
+  const btn = document.getElementById("liveInvBtn");
+  const status = document.getElementById("liveInvStatus");
+  btn.disabled = true;
+  status.style.display = "flex";
+  status.innerHTML = `<span class="live-dot"></span> Starting the Gemini investigator…`;
+  try{
+    const r = await fetch("/api/investigate/"+encodeURIComponent(LABEL), {method:"POST"});
+    if(!r.ok){ const t = await r.text(); throw new Error(JSON.parse(t).detail||t); }
+    pollInvestigation();
+  }catch(e){
+    status.innerHTML = `✗ ${esc(e.message)}`; btn.disabled = false;
+  }
+}
+
+async function pollInvestigation(){
+  const status = document.getElementById("liveInvStatus");
+  const btn = document.getElementById("liveInvBtn");
+  try{
+    const r = await fetch("/api/investigate/"+encodeURIComponent(LABEL)+"/status");
+    const d = await r.json();
+    if(d.state==="running"){
+      status.innerHTML = `<span class="live-dot"></span> Gemini investigator reasoning over Phoenix MCP… <b>${d.elapsed||0}s</b>`;
+      setTimeout(pollInvestigation, 2000);
+    } else if(d.state==="done"){
+      status.innerHTML = `✓ Live investigation complete in <b>${d.elapsed}s</b> — ${d.result?.mcp_calls||0} real Phoenix MCP calls.`;
+      document.getElementById("invPanel").innerHTML = renderInvestigation(d.result, lastReport, true);
+      btn.textContent = "▶ Run it live again"; btn.disabled = false;
+    } else if(d.state==="error"){
+      status.innerHTML = `✗ ${esc(d.error||"investigation failed")}`; btn.disabled = false;
+    } else {
+      status.innerHTML = `✗ investigation not found`; btn.disabled = false;
+    }
+  }catch(e){ status.innerHTML = `✗ ${esc(e.message)}`; btn.disabled = false; }
 }
 
 async function approve(){
