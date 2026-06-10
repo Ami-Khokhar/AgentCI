@@ -1,0 +1,19 @@
+# Cloud Build upload context. Unlike .gitignore this KEEPS runs/*.json — the hosted
+# dashboard serves the recorded demo runs. Secrets and caches must never upload.
+.git/
+.gitignore
+.env
+.env.*
+.venv/
+.worktrees/
+.agentci_cache/
+.agentci_cache_calib/
+.agentci_cache_traces/
+.agentci_experiments.json
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+promoted/
+docs/
+tests/
