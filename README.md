@@ -5,6 +5,10 @@
 
 Built for the **Arize × Google Cloud Rapid Agent Hackathon**.
 
+**🔗 Live demo:** https://agentci-dashboard-585298698353.us-central1.run.app/?run=reg_refund
+(the real, recorded green run — a regression caught, root-caused via Phoenix MCP, fixed, and
+proven on held-out data, awaiting human approval)
+
 ---
 
 ## The problem

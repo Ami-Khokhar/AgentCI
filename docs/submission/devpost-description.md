@@ -78,6 +78,6 @@ PRs), and noise-floor auto-recalibration as a scheduled job.
 
 ## Links
 
-- Hosted demo: [CLOUD RUN URL]
+- Hosted demo: https://agentci-dashboard-585298698353.us-central1.run.app/?run=reg_refund
 - Repo: https://github.com/Ami-Khokhar/AgentCI (MIT)
 - Video: [YOUTUBE URL]
