@@ -33,7 +33,8 @@ def _load_report(label: str) -> dict:
 
 
 def _investigable_runs() -> list[str]:
-    """Labels whose live investigator can run: candidate prompt bundled + tune experiment registered."""
+    """Labels whose live investigator can run: candidate prompt bundled, tune experiment registered,
+    AND the run actually has a regression (a benign run has nothing to investigate)."""
     from agentci import experiments_registry
     out = []
     if not _CANDIDATES_DIR.exists():
@@ -44,8 +45,14 @@ def _investigable_runs() -> list[str]:
             experiments_registry.get_id(f"cand-{label}-tune")
         except KeyError:
             continue
-        if (_RUNS_DIR / f"{label}.json").exists():
-            out.append(label)
+        report_path = _RUNS_DIR / f"{label}.json"
+        if not report_path.exists():
+            continue
+        try:
+            if json.loads(report_path.read_text(encoding="utf-8")).get("regression_detected"):
+                out.append(label)
+        except (ValueError, OSError):
+            continue
     return sorted(out)
 
 

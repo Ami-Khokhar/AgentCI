@@ -102,6 +102,21 @@ def test_investigate_409_when_no_regression(monkeypatch, tmp_path):
     c = TestClient(appmod.create_app())
     assert c.post("/api/investigate/benign").status_code == 409
 
+def test_investigable_runs_requires_regression_and_experiment(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "candidates").mkdir()
+    for label in ("reg", "benign", "noexp"):
+        (tmp_path / "candidates" / f"{label}.txt").write_text("p", encoding="utf-8")
+    _seed(tmp_path, "reg", {"regression_detected": True})
+    _seed(tmp_path, "benign", {"regression_detected": False})
+    _seed(tmp_path, "noexp", {"regression_detected": True})
+    monkeypatch.setenv("AGENTCI_EXPERIMENTS_FILE", str(tmp_path / "exp.json"))
+    import agentci.experiments_registry as reg
+    reg.register("cand-reg-tune", "E1")        # reg: has experiment + regression  -> investigable
+    reg.register("cand-benign-tune", "E2")     # benign: experiment but no regression -> excluded
+    # noexp: regression but no registered experiment -> excluded
+    assert appmod._investigable_runs() == ["reg"]
+
 def test_investigation_status_idle_when_never_started(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     appmod._INVESTIGATIONS.clear()
