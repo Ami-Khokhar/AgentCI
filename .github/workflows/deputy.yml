@@ -35,7 +35,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       NUM: ${{ github.event.issue.number }}
       BASE: ${{ github.event.repository.default_branch }}
-      TMP: ${{ runner.temp }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -167,6 +166,8 @@ jobs:
       # --- DECIDE, OPEN PR, LABEL --------------------------------------------
       - name: Open PR and set final label
         if: steps.claim.outputs.proceed == 'true'
+        env:
+          TMP: ${{ runner.temp }}
         run: |
           set -uo pipefail
           BRANCH="${{ steps.co.outputs.branch }}"
