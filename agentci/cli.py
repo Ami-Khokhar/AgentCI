@@ -51,7 +51,7 @@ def check(candidate, label, runs_dir):
 
 @cli.command()
 def ping():
-    """Print pong (liveness check)."""
+    """Health check - prints pong"""
     click.echo("pong")
 
 
