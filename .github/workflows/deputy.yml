@@ -70,7 +70,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--max-turns 60 --model sonnet'
+          claude_args: '--max-turns 60 --model sonnet --allowedTools "Bash,Edit,Write,MultiEdit,Read,Glob,Grep"'
           prompt: |
             You are Deputy's IMPLEMENTER. A GitHub issue is your task.
 
@@ -159,7 +159,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--max-turns 25 --model sonnet'
+          claude_args: '--max-turns 25 --model sonnet --allowedTools "Bash,Read,Glob,Grep,Write"'
           prompt: |
             You are Deputy's REVIEWER. You did NOT write this code. Be skeptical and
             independent — your job is to find problems, not to rubber-stamp.
