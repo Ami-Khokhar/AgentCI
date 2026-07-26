@@ -1,0 +1,237 @@
+name: deputy
+
+# Deputy — issue in, reviewed PR out. Runs entirely on GitHub-hosted runners.
+#
+# Trigger:  add the `agent:ready` label to any issue.
+# Flow:     claim → revalidate → implement (Claude) → checkout → verify gate → review (Claude) → open PR.
+# Boundary: Deputy NEVER merges. It opens a PR and hands you the decision.
+#
+# The three quality rings, innermost (hardest) first:
+#   1. Verify gate      — a deterministic command (tests/lint). Exit code, no arguing with it.
+#   2. Reviewer agent   — a second, skeptical Claude that never saw the implementer's reasoning.
+#   3. taste.md         — the constitution both agents read. Soft guidance, but consistent.
+# A PR only earns `agent:done` when the gate is green AND the reviewer approves.
+
+on:
+  issues:
+    types: [labeled]
+
+# The label is the lock. One run per issue; never clobber a run already in flight.
+concurrency:
+  group: deputy-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Fire only for the ready label. Every other `labeled` event (including the
+    # ones this job creates by swapping labels) is filtered out here.
+    if: github.event.label.name == 'agent:ready'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the work branch
+      issues: write          # swap labels, comment
+      pull-requests: write   # open the PR
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NUM: ${{ github.event.issue.number }}
+      BASE: ${{ github.event.repository.default_branch }}
+      TMP: ${{ runner.temp }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- CLAIM + REVALIDATE ------------------------------------------------
+      # Swap ready→running so a second labeling can't double-claim, and abort if
+      # the issue was closed or the label pulled between trigger and execution.
+      # A clean abort exits 0 with proceed=false (it is NOT an error) so the
+      # failure() recovery step below does not misfire and mislabel the issue.
+      - name: Claim and revalidate
+        id: claim
+        run: |
+          set -euo pipefail
+          state=$(gh issue view "$NUM" --json state,labels)
+          if [ "$(echo "$state" | jq -r .state)" != "OPEN" ]; then
+            echo "Issue #$NUM is not open — nothing to do."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! echo "$state" | jq -e '.labels[] | select(.name=="agent:ready")' >/dev/null; then
+            echo "agent:ready no longer present — cancelled or already claimed."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          gh issue edit "$NUM" --remove-label agent:ready --add-label agent:running
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      # --- IMPLEMENT ---------------------------------------------------------
+      - name: Implement (Claude)
+        id: implement
+        if: steps.claim.outputs.proceed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--max-turns 60 --model sonnet'
+          prompt: |
+            You are Deputy's IMPLEMENTER. A GitHub issue is your task.
+
+            Repository: ${{ github.repository }}
+            Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+
+            Task:
+            ${{ github.event.issue.body }}
+
+            Rules of engagement:
+            - Read `taste.md` at the repo root FIRST. It is the constitution. Obey it.
+            - Make the SMALLEST change that fully satisfies the issue. No scope creep,
+              no drive-by refactors, no touching unrelated files.
+            - When you change behavior, add or update tests for it.
+            - Commit your work with a clear, conventional commit message.
+            - Do NOT open a pull request — a later step does that.
+            - If the issue is ambiguous, underspecified, or unsafe to do automatically,
+              make NO code changes. Instead write a short explanation of the blocker to
+              the file `${{ runner.temp }}/deputy-blocked.md`, and stop.
+
+      # --- CHECKOUT THE WORK BRANCH ------------------------------------------
+      # Guarantee the gate and reviewer see the implementer's actual changes,
+      # regardless of what working tree the action left behind. Empty branch
+      # means no changes were produced → routed to `blocked` downstream.
+      - name: Checkout work branch
+        id: co
+        if: steps.claim.outputs.proceed == 'true'
+        run: |
+          set -uo pipefail
+          BRANCH="${{ steps.implement.outputs.branch_name }}"
+          if [ -z "$BRANCH" ]; then
+            echo "No branch produced by the implementer."
+            echo "branch=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git fetch -q origin "$BRANCH" || true
+          git checkout -q "$BRANCH" 2>/dev/null || git checkout -q -B "$BRANCH" "origin/$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # --- VERIFY GATE (the deterministic referee) ---------------------------
+      # Runs the repo's own check from the `DEPUTY_VERIFY` Actions variable.
+      # continue-on-error: a red gate must not abort the run — we still open the
+      # PR, labelled needs-work, so a human can see what broke.
+      - name: Verify gate
+        id: gate
+        if: steps.claim.outputs.proceed == 'true' && steps.co.outputs.branch != ''
+        continue-on-error: true
+        env:
+          VERIFY: ${{ vars.DEPUTY_VERIFY }}
+        run: |
+          set -uo pipefail
+          CMD="$VERIFY"
+          if [ -z "$CMD" ]; then
+            echo "No DEPUTY_VERIFY variable set — falling back to a Python syntax smoke test."
+            CMD="python -m compileall -q ."
+          fi
+          echo "::group::verify → $CMD"
+          bash -lc "$CMD"
+          code=$?
+          echo "::endgroup::"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "0" ]; then echo "gate passed"; else echo "gate FAILED (exit $code)"; fi
+          exit 0
+
+      # --- REVIEW ------------------------------------------------------------
+      - name: Review (Claude)
+        id: review
+        if: steps.claim.outputs.proceed == 'true' && steps.co.outputs.branch != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--max-turns 25 --model sonnet'
+          prompt: |
+            You are Deputy's REVIEWER. You did NOT write this code. Be skeptical and
+            independent — your job is to find problems, not to rubber-stamp.
+
+            The implementer's work is on branch `${{ steps.co.outputs.branch }}`,
+            already pushed to origin. Inspect the change with:
+              git fetch -q origin
+              git diff origin/${{ env.BASE }}...origin/${{ steps.co.outputs.branch }}
+
+            Judge it against, in order:
+            1. `taste.md` (the constitution) — read it first.
+            2. Whether the change actually does what issue #${{ github.event.issue.number }} asked.
+            3. The verify gate: it exited with code ${{ steps.gate.outputs.exit_code }}
+               (0 = passed). A failing gate is normally a blocking problem.
+
+            Do NOT modify code. Do NOT commit anything. Your ONLY output is a verdict
+            file. Write it to `${{ runner.temp }}/deputy-verdict.md`. Its FIRST line
+            must be EXACTLY one of:
+              VERDICT: APPROVE
+              VERDICT: REVISE
+            Then a short, specific review: what's good, what blocks it, and how to fix.
+
+      # --- DECIDE, OPEN PR, LABEL --------------------------------------------
+      - name: Open PR and set final label
+        if: steps.claim.outputs.proceed == 'true'
+        run: |
+          set -uo pipefail
+          BRANCH="${{ steps.co.outputs.branch }}"
+          GATE="${{ steps.gate.outputs.exit_code }}"
+
+          # Blocked, or the implementer produced no branch/changes.
+          if [ -f "$TMP/deputy-blocked.md" ] || [ -z "$BRANCH" ]; then
+            gh issue edit "$NUM" --remove-label agent:running --add-label agent:blocked || true
+            body="Deputy could not implement this automatically (no changes produced)."
+            [ -f "$TMP/deputy-blocked.md" ] && body="$(cat "$TMP/deputy-blocked.md")"
+            gh issue comment "$NUM" --body "$(printf '🚫 **Deputy: blocked**\n\n%s' "$body")"
+            exit 0
+          fi
+
+          # Parse the reviewer's verdict (anchored so REVISE text can't false-match).
+          VERDICT="REVISE"
+          if [ -f "$TMP/deputy-verdict.md" ] && head -n1 "$TMP/deputy-verdict.md" | grep -q '^VERDICT: APPROVE'; then
+            VERDICT="APPROVE"
+          fi
+          REVIEW="$( [ -f "$TMP/deputy-verdict.md" ] && cat "$TMP/deputy-verdict.md" || echo '(no review produced)')"
+
+          GATE_TXT="passed ✅"
+          [ "${GATE:-1}" != "0" ] && GATE_TXT="FAILED ❌ (exit ${GATE:-?})"
+
+          TITLE="Deputy: $(gh issue view "$NUM" --json title -q .title)"
+          PR_BODY="$(cat <<EOF
+          Automated by **Deputy** from issue #$NUM.
+
+          - **Verify gate:** $GATE_TXT
+          - **Reviewer verdict:** $VERDICT
+
+          <details><summary>Reviewer notes</summary>
+
+          $REVIEW
+          </details>
+
+          Closes #$NUM
+
+          ---
+          🤖 Deputy opened this PR and does not merge. Review and merge is yours.
+          EOF
+          )"
+
+          # A failed PR creation must not be reported as success.
+          if ! PR_URL=$(gh pr create --base "$BASE" --head "$BRANCH" --title "$TITLE" --body "$PR_BODY"); then
+            echo "gh pr create failed"
+            gh issue edit "$NUM" --remove-label agent:running --add-label agent:failed || true
+            gh issue comment "$NUM" --body "💥 Deputy built and reviewed the change on branch \`$BRANCH\`, but opening the PR failed. See the Actions log."
+            exit 1
+          fi
+
+          gh issue edit "$NUM" --remove-label agent:running || true
+          if [ "$GATE" = "0" ] && [ "$VERDICT" = "APPROVE" ]; then
+            gh issue edit "$NUM" --add-label agent:done
+            gh issue comment "$NUM" --body "$(printf '✅ **Deputy: ready for your review** (gate passed, reviewer approved)\n\n%s' "$PR_URL")"
+          else
+            gh issue edit "$NUM" --add-label agent:needs-work
+            gh issue comment "$NUM" --body "$(printf '⚠️ **Deputy: PR opened but it needs work** — gate: %s, review: %s\n\n%s' "$GATE_TXT" "$VERDICT" "$PR_URL")"
+          fi
+
+      # --- RECOVER ON FAILURE ------------------------------------------------
+      # Only fires on a genuine error (a clean claim-abort exits 0 and skips this).
+      # Idempotent: safe even if a terminal label was already set.
+      - name: Recover on failure
+        if: failure()
+        run: |
+          gh issue edit "$NUM" --remove-label agent:running --add-label agent:failed || true
+          gh issue comment "$NUM" --body "💥 Deputy's run errored before finishing. See the Actions log for this run." || true
