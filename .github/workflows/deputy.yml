@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
       id-token: write
     # Pin @main for latest, or a tag like @v1 for stability.
-    uses: ./.github/workflows/_deputy-lib.yml
+    uses: Ami-Khokhar/deputy/.github/workflows/deputy.yml@main
     with:
       # The deterministic gate. MUST run green in a fresh CI runner:
       # self-provision the toolchain and install every dep needed to collect
