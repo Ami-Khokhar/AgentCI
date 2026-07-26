@@ -85,28 +85,38 @@ jobs:
             - Make the SMALLEST change that fully satisfies the issue. No scope creep,
               no drive-by refactors, no touching unrelated files.
             - When you change behavior, add or update tests for it.
-            - Commit your work with a clear, conventional commit message.
-            - Do NOT open a pull request — a later step does that.
+            - You do NOT need to manage git or open a PR — just make the file
+              changes. A later step commits and pushes them for you.
             - If the issue is ambiguous, underspecified, or unsafe to do automatically,
               make NO code changes. Instead write a short explanation of the blocker to
               the file `${{ runner.temp }}/deputy-blocked.md`, and stop.
 
-      # --- CHECKOUT THE WORK BRANCH ------------------------------------------
-      # Guarantee the gate and reviewer see the implementer's actual changes,
-      # regardless of what working tree the action left behind. Empty branch
-      # means no changes were produced → routed to `blocked` downstream.
-      - name: Checkout work branch
+      # --- CAPTURE THE WORK, PUSH A BRANCH -----------------------------------
+      # Don't rely on the action's implicit branch handling — capture the
+      # implementer's changes directly, whether it left them uncommitted or
+      # committed them locally, then create and push our own branch. No new
+      # commits and a clean tree ⇒ empty branch ⇒ routed to `blocked`.
+      - name: Commit and push work branch
         id: co
         if: steps.claim.outputs.proceed == 'true'
         run: |
           set -uo pipefail
-          BRANCH="${{ steps.implement.outputs.branch_name }}"
-          if [ -z "$BRANCH" ]; then
-            echo "No branch produced by the implementer."
+          git config user.name "deputy[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="deputy/issue-$NUM"
+          if [ -n "$(git status --porcelain)" ]; then
+            # Implementer left changes uncommitted — commit them onto a new branch.
+            git checkout -q -b "$BRANCH"
+            git add -A
+            git commit -q -m "Deputy: implement #$NUM"
+          elif [ "$(git rev-list --count "origin/$BASE"..HEAD 2>/dev/null || echo 0)" -gt 0 ]; then
+            # Implementer committed locally — branch off the current HEAD.
+            git checkout -q -b "$BRANCH"
+          else
+            echo "No changes produced by the implementer."
             echo "branch=" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          git fetch -q origin "$BRANCH" || true
-          git checkout -q "$BRANCH" 2>/dev/null || git checkout -q -B "$BRANCH" "origin/$BRANCH"
+          git push -q --force -u origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       # --- VERIFY GATE (the deterministic referee) ---------------------------
