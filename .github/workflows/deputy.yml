@@ -1,32 +1,53 @@
 # Deputy caller — the ONLY Deputy file that lives in a target repo.
-# The whole pipeline lives in Ami-Khokhar/deputy; this just calls it. Fixes to
-# the reusable workflow reach every repo automatically. Copy this to
+# The pipelines live in Ami-Khokhar/deputy; this routes events to them. Fixes to
+# the reusable workflows reach every repo automatically. Copy this to
 # .github/workflows/deputy.yml on the repo's DEFAULT branch (install.sh does it).
+#
+# Triggers:
+#   - label an issue `agent:ready`            → implement the issue → PR
+#   - comment `@deputy [notes]` on an issue   → same as the label
+#   - comment `@deputy <instruction>` on a PR → revise that PR's branch in place
+# @deputy comments only fire for repo owners/members/collaborators (security:
+# otherwise anyone could spend your Claude token).
 name: deputy
 
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 jobs:
-  deputy:
-    # Fire only for the ready label; every other labeled event is ignored.
-    if: github.event.label.name == 'agent:ready'
-    # The reusable workflow inherits exactly these permissions.
+  # Issue flow: label, or @deputy on an issue (not a PR).
+  issue:
+    if: >-
+      (github.event_name == 'issues' && github.event.label.name == 'agent:ready') ||
+      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@deputy') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     permissions:
       contents: write
       issues: write
       pull-requests: write
       id-token: write
-    # Pin @main for latest, or a tag like @v1 for stability.
     uses: Ami-Khokhar/deputy/.github/workflows/deputy.yml@main
     with:
-      # The deterministic gate. MUST run green in a fresh CI runner:
-      # self-provision the toolchain and install every dep needed to collect
-      # tests. Set the DEPUTY_VERIFY variable on this repo (install.sh does it).
-      # Examples: "npm ci && npm test" · "cargo test" · "go test ./..."
       verify: ${{ vars.DEPUTY_VERIFY }}
-    # Pass the token explicitly (cross-repo `secrets: inherit` is unreliable on
-    # personal accounts). This repo needs the CLAUDE_CODE_OAUTH_TOKEN secret.
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+  # PR flow: @deputy on a pull request → revise the PR's branch in place.
+  pr:
+    if: >-
+      github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@deputy') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    uses: Ami-Khokhar/deputy/.github/workflows/deputy-pr.yml@main
+    with:
+      verify: ${{ vars.DEPUTY_VERIFY }}
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
