@@ -22,6 +22,12 @@ def test_check_writes_report_and_prints_gate(monkeypatch):
         data = json.loads(Path("runs/reg-refund.json").read_text())
         assert data["verdict"] == "green_promotable_fix"
 
+def test_bye_prints_goodbye():
+    runner = CliRunner()
+    result = runner.invoke(cli_mod.cli, ["bye"])
+    assert result.exit_code == 0, result.output
+    assert "goodbye" in result.output
+
 def test_check_defaults_label_to_filename_stem(monkeypatch):
     canned = {"candidate_label": "cand", "regression_detected": False,
               "flips": {"pass_to_fail": [], "fail_to_pass": []},
