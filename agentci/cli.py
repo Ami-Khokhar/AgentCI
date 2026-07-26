@@ -50,6 +50,12 @@ def check(candidate, label, runs_dir):
 
 
 @cli.command()
+def bye():
+    """Say goodbye."""
+    click.echo("goodbye")
+
+
+@cli.command()
 @click.option("--run", "run_path", required=True, type=click.Path(exists=True, dir_okay=False),
               help="Path to a run report JSON to approve.")
 def approve(run_path):
