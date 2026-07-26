@@ -3,7 +3,13 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from agentci import cli as cli_mod
+from agentci import __version__, cli as cli_mod
+
+def test_version_flag_prints_version_and_exits_zero():
+    runner = CliRunner()
+    result = runner.invoke(cli_mod.cli, ["--version"])
+    assert result.exit_code == 0, result.output
+    assert __version__ in result.output
 
 def test_check_writes_report_and_prints_gate(monkeypatch):
     canned = {"candidate_label": "reg-refund", "regression_detected": True,

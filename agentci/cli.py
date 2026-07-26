@@ -4,12 +4,14 @@ from pathlib import Path
 
 import click
 
+from agentci import __version__
 from agentci.engineer import run_check
 
 _GATE_MARK = {"green": "GREEN ✅", "red": "RED ⛔"}
 
 
 @click.group()
+@click.version_option(__version__)
 def cli():
     """AgentCI — regression CI for AI agents."""
 
