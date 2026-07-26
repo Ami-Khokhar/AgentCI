@@ -85,39 +85,47 @@ jobs:
             - Make the SMALLEST change that fully satisfies the issue. No scope creep,
               no drive-by refactors, no touching unrelated files.
             - When you change behavior, add or update tests for it.
-            - You do NOT need to manage git or open a PR — just make the file
-              changes. A later step commits and pushes them for you.
-            - If the issue is ambiguous, underspecified, or unsafe to do automatically,
-              make NO code changes. Instead write a short explanation of the blocker to
-              the file `${{ runner.temp }}/deputy-blocked.md`, and stop.
+
+            When you have finished editing, publish your work with the Bash tool by
+            running EXACTLY these commands — this is how Deputy collects your work:
+              git config user.email "deputy@users.noreply.github.com"
+              git config user.name "deputy[bot]"
+              git checkout -b deputy/issue-${{ github.event.issue.number }}
+              git add -A
+              git commit -m "Deputy: implement #${{ github.event.issue.number }}"
+              git push -u origin deputy/issue-${{ github.event.issue.number }} --force
+
+            If the issue is ambiguous, underspecified, or unsafe to do automatically,
+            make NO code changes, do NOT run git, and instead write a short explanation
+            of the blocker to `${{ runner.temp }}/deputy-blocked.md`.
 
       # --- CAPTURE THE WORK, PUSH A BRANCH -----------------------------------
       # Don't rely on the action's implicit branch handling — capture the
       # implementer's changes directly, whether it left them uncommitted or
       # committed them locally, then create and push our own branch. No new
       # commits and a clean tree ⇒ empty branch ⇒ routed to `blocked`.
-      - name: Commit and push work branch
+      - name: Collect the work branch
         id: co
         if: steps.claim.outputs.proceed == 'true'
         run: |
           set -uo pipefail
-          git config user.name "deputy[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH="deputy/issue-$NUM"
-          if [ -n "$(git status --porcelain)" ]; then
-            # Implementer left changes uncommitted — commit them onto a new branch.
-            git checkout -q -b "$BRANCH"
-            git add -A
-            git commit -q -m "Deputy: implement #$NUM"
-          elif [ "$(git rev-list --count "origin/$BASE"..HEAD 2>/dev/null || echo 0)" -gt 0 ]; then
-            # Implementer committed locally — branch off the current HEAD.
-            git checkout -q -b "$BRANCH"
-          else
-            echo "No changes produced by the implementer."
-            echo "branch=" >> "$GITHUB_OUTPUT"; exit 0
+          git config user.name "deputy[bot]"
+          git config user.email "deputy@users.noreply.github.com"
+          # Primary path: the implementer pushed the branch to origin.
+          git fetch -q origin "$BRANCH" 2>/dev/null || true
+          if git rev-parse --verify -q "refs/remotes/origin/$BRANCH" >/dev/null; then
+            git checkout -q -B "$BRANCH" "origin/$BRANCH"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          git push -q --force -u origin "$BRANCH"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          # Fallback: it edited the workspace but didn't push — capture that.
+          if [ -n "$(git status --porcelain)" ]; then
+            git checkout -q -b "$BRANCH"; git add -A; git commit -q -m "Deputy: implement #$NUM"
+            git push -q --force -u origin "$BRANCH"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "No changes produced by the implementer."
+          echo "branch=" >> "$GITHUB_OUTPUT"
 
       # --- VERIFY GATE (the deterministic referee) ---------------------------
       # Runs the repo's own check from the `DEPUTY_VERIFY` Actions variable.
