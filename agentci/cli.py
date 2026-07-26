@@ -15,6 +15,12 @@ def cli():
 
 
 @cli.command()
+def status():
+    """Print a simple health check."""
+    click.echo("ok")
+
+
+@cli.command()
 @click.option("--candidate", "candidate", required=True, type=click.Path(exists=True, dir_okay=False),
               help="Path to a candidate system-prompt .txt file.")
 @click.option("--label", default=None, help="Run label (defaults to the candidate file stem).")

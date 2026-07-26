@@ -5,6 +5,12 @@ from click.testing import CliRunner
 
 from agentci import cli as cli_mod
 
+def test_status_prints_ok():
+    runner = CliRunner()
+    result = runner.invoke(cli_mod.cli, ["status"])
+    assert result.exit_code == 0
+    assert "ok" in result.output
+
 def test_check_writes_report_and_prints_gate(monkeypatch):
     canned = {"candidate_label": "reg-refund", "regression_detected": True,
               "flips": {"pass_to_fail": ["t00"], "fail_to_pass": []},
