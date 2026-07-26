@@ -26,5 +26,7 @@ jobs:
       # tests. Set the DEPUTY_VERIFY variable on this repo (install.sh does it).
       # Examples: "npm ci && npm test" · "cargo test" · "go test ./..."
       verify: ${{ vars.DEPUTY_VERIFY }}
-    # Passes this repo's CLAUDE_CODE_OAUTH_TOKEN secret to the reusable workflow.
-    secrets: inherit
+    # Pass the token explicitly (cross-repo `secrets: inherit` is unreliable on
+    # personal accounts). This repo needs the CLAUDE_CODE_OAUTH_TOKEN secret.
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
